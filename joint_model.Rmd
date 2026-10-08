@@ -1,0 +1,798 @@
+---
+title: "pilot_join_pupiil"
+author: "Fournier Raphaël"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+pkxg <- c("EMC2", "tidyverse", "patchwork", "here", "styler")
+lapply(pkxg, library, character.only = TRUE)
+```
+
+Load behavioural model data
+```{r}
+behav_data_test <-read_csv(here("data", "data_WP3_model.csv")) %>%
+  select(pid, trial, cond, acc, rt) %>% 
+  rename(subjects = pid, S = cond, R = acc) %>% 
+  mutate(subjects=factor(subjects),
+         S=factor(S,
+                  levels = c("Novel", "Learned")),
+         R=case_when(
+           R == "1" & S == "Novel" ~ "Novel",
+           R == "1" & S == "Learned" ~ "Learned",
+           R == "0" & S == "Novel" ~ "Learned",
+           R == "0" & S == "Learned" ~ "Novel"),
+         R=factor(R,
+                  levels = c("Novel", "Learned"))) %>% 
+  as.data.frame()
+
+sdt_summary <- behav_data_test |>
+  mutate(
+    outcome = case_when(
+      S == "Learned" & R == "Learned" ~ "hit",
+      S == "Learned" & R == "Novel"   ~ "miss",
+      S == "Novel"   & R == "Novel"   ~ "cr",
+      S == "Novel"   & R == "Learned" ~ "fa"
+    )
+  ) |>
+  count(subjects, outcome) |>
+  pivot_wider(names_from = outcome, values_from = n, values_fill = 0) |>
+  mutate(
+    hit_rate  = hit  / (hit + miss),
+    miss_rate = miss / (hit + miss),
+    cr_rate   = cr   / (cr + fa),
+    fa_rate   = fa   / (cr + fa)
+  )
+```
+
+
+Load pupil metrics
+```{r}
+mean_pid <- read_csv(here("data", "pupil_metrics", "mean_pid_trial.csv")) %>%
+  select(pid, trial, condition, accuracy, mean)
+max_pid <- read_csv(here("data", "pupil_metrics", "max_pid_trial.csv")) %>%
+  select(pid, trial, condition, accuracy, pupil_peak_diff)
+change_pid <- read_csv(here("data", "pupil_metrics", "change_pid_trial.csv")) %>%
+  select(pid, trial, condition, accuracy, mean_pupil_change)
+
+
+
+pupil_data_test <- mean_pid %>%
+  mutate(max_pupil = max_pid$pupil_peak_diff,
+         rate_pupil = change_pid$mean_pupil_change) %>%
+  rename(S = condition,
+         correct = accuracy,
+         mean_pupil = mean,
+         subjects = pid) %>%
+  mutate(S = fct_recode(S, Novel = "unfamiliar", Learned = "learned"),
+         S = factor(S, levels = c("Novel", "Learned"))) %>%
+  mutate(R=case_when(
+           correct == "1" & S == "Novel" ~ "Novel",
+           correct == "1" & S == "Learned" ~ "Learned",
+           correct == "0" & S == "Novel" ~ "Learned",
+           correct == "0" & S == "Learned" ~ "Novel"),
+         R=factor(R,
+                  levels = c("Novel", "Learned")),
+         subjects = as.factor(subjects),
+         correct = case_when(
+           R == "Novel" & S == "Novel" ~ "true",
+           R == "Novel" & S == "Learned" ~ "false",
+           R == "Learned" & S == "Novel" ~ "false",
+           R == "Learned" & S == "Learned" ~ "true")
+         ) %>%
+  relocate(R, .before = mean_pupil) 
+```
+
+
+```{r}
+behav_subs <- unique(as.character(behav_data_test$subjects))
+pupil_subs <- unique(as.character(pupil_data_test$subjects))
+
+only_in_behav <- setdiff(behav_subs, pupil_subs)
+only_in_pupil <- setdiff(pupil_subs, behav_subs)
+only_in_behav
+only_in_pupil
+```
+
+
+Create pupil design_1
+```{r}
+# 1. Compare on raw character/original values, before any factor coercion
+# ============================================================================
+# Pupil design matrices (predictors) — built once, shared across all 3 measures
+# ============================================================================
+pupil_data_test$subjects <- factor(pupil_data_test$subjects, levels = levels(behav_data_test$subjects))
+
+pupil_design_matrices <- pupil_data_test |>
+  mutate(
+    learned_true = as.numeric(S == "Learned" & correct == "true"),
+    learned_false = as.numeric(S == "Learned" & correct == "false"),
+    novel_true = as.numeric(S == "Novel" & correct == "true"),
+    novel_false = as.numeric(S == "Novel" & correct == "false")
+  ) |>
+  group_by(subjects) |>
+  group_split() |>
+  setNames(levels(pupil_data_test$subjects)) |>
+  map(\(d) {
+    d |>
+      dplyr::select(learned_true, learned_false, novel_true, novel_false) |>
+      as.data.frame()
+  })
+
+# One emc.design object, reused for all three measures —
+# design_fmri() only encodes the predictor structure, not the outcome column
+design_pupil <- design_fmri(
+  design_matrix = pupil_design_matrices,
+  model = MRI
+)
+
+# ============================================================================
+# Three separate outcome data sets — one "ROI-style" data frame per measure
+# ============================================================================
+pupil_mean_data <- pupil_data_test |>
+  dplyr::select(subjects, mean_pupil) |>
+  mutate(subjects = factor(subjects))
+
+pupil_max_data <- pupil_data_test |>
+  dplyr::select(subjects, max_pupil) |>
+  mutate(subjects = factor(subjects))
+
+pupil_rate_data <- pupil_data_test |>
+  dplyr::select(subjects, rate_pupil) |>
+  mutate(subjects = factor(subjects))
+
+cat("=== PUPIL DESIGN (shared across mean/max/rate) ===\n")
+summary(design_pupil)
+```
+
+Create pupil design_2
+```{r}
+# 1. Compare on raw character/original values, before any factor coercion
+# ============================================================================
+# Pupil design matrices (predictors) — built once, shared across all 3 measures
+# ============================================================================
+pupil_data_test$subjects <- factor(pupil_data_test$subjects, levels = levels(behav_data_test$subjects))
+
+pupil_design_matrices_2 <- pupil_data_test |>
+  mutate(
+    learned = as.numeric(S == "Learned"),
+    novel = as.numeric(S == "Novel")
+  ) |>
+  group_by(subjects) |>
+  group_split() |>
+  setNames(levels(pupil_data_test$subjects)) |>
+  map(\(d) {
+    d |>
+      dplyr::select(learned, novel) |>
+      as.data.frame()
+  })
+
+
+# One emc.design object, reused for all three measures —
+# design_fmri() only encodes the predictor structure, not the outcome column
+design_pupil_2 <- design_fmri(
+  design_matrix = pupil_design_matrices_2,
+  model = MRI
+)
+
+# ============================================================================
+# Three separate outcome data sets — one "ROI-style" data frame per measure
+# ============================================================================
+pupil_mean_data <- pupil_data_test |>
+  dplyr::select(subjects, mean_pupil) |>
+  mutate(subjects = factor(subjects))
+
+pupil_max_data <- pupil_data_test |>
+  dplyr::select(subjects, max_pupil) |>
+  mutate(subjects = factor(subjects))
+
+pupil_rate_data <- pupil_data_test |>
+  dplyr::select(subjects, rate_pupil) |>
+  mutate(subjects = factor(subjects))
+
+cat("=== PUPIL DESIGN (shared across mean/max/rate) ===\n")
+summary(design_pupil)
+```
+
+Behavioural design
+```{r}
+# ============================================================================
+# LBA Design: v varies by condition and accuracy, everything else fixed
+# ============================================================================
+
+matchfun <- function(d) d$S == d$lR
+
+design_behav <- design(
+  factors = list(
+    subjects = levels(behav_data_test$subjects),
+    S = c("Learned", "Novel")
+  ),
+  Rlevels = c("Learned", "Novel"),
+  model = LBA,
+  matchfun = matchfun,
+  formula = list(
+    v ~ 0 + S:lM,
+    sv ~ 0 + lM,
+    B ~ 0 + lR,
+    A ~ 1,
+    t0 ~ 1
+  ),
+  constants = c(sv_lMFALSE = log(1))
+)
+
+```
+Joint-modelling
+```{r}
+#| label: fit-model
+
+## use EMC2::make_emc() to setup an emc object for a joint model.
+## note how you just list the different data and designs in order
+joint_emc <- make_emc(
+  data = list(
+    pupil_mean = pupil_mean_data,
+    behavior   = behav_data_test
+  ),
+  design = list(
+    pupil_mean = design_pupil,
+    behavior   = design_behav
+  ),
+  type = "standard",
+  n_chains = 3,
+  compress = TRUE
+)
+
+#Model 2
+joint_emc_2 <- make_emc(
+  data = list(
+    pupil_mean = pupil_mean_data,
+    behavior   = behav_data_test
+  ),
+  design = list(
+    pupil_mean = design_pupil_2,
+    behavior   = design_behav
+  ),
+  type = "standard",
+  n_chains = 3,
+  compress = TRUE
+)
+## fit the model_2
+## this might take a while. e.g., 50 minutes on a 28 core mac studio
+
+joint_fit <- fit(
+  joint_emc_2,
+  iter = 1000,
+  stage = "preburn",
+  step_size = 200,
+  cores_for_chains = 1,
+  cores_per_chain = 6,
+  verbose = TRUE,
+  fileName = "samples/joint_model_try_2.RData"
+)
+
+##Continue fitting
+joint_fit <- fit(
+  joint_fit,
+  iter = 2000,
+  stage = "sample",
+  step_size = 200,
+  cores_for_chains = 1,
+  cores_per_chain = 6,
+  verbose = TRUE,
+  fileName = "samples/joint_model_mean.RData"
+)
+```
+
+# 6. Check Results
+
+```{r}
+#| label: diagnostics
+
+## read in from file, if previously compiled
+# load("samples/joint_recovery_simple.RData")
+# joint_fit <- emc
+# rm(emc)
+
+check(joint_fit)
+summary(joint_fit)
+summary(joint_fit, selection = c("mu", "sigma2", "alpha", "correlation"))
+
+plot(joint_fit)
+# plot(joint_fit, selection = "correlation")
+
+# plot updating from prior and posterior
+plot_pars(joint_fit, selection = "correlation")
+
+## some notes on looking at varying effects by PID
+## alpha = varying effects by PID
+## EMC2::summary() only prints subject 1 (to keep the console free), but returns ALL subjects in the function
+## this is important to keep in mind
+## e.g., the below has all varying effects
+alpha_summ <- summary(joint_fit, selection = "alpha")
+
+# Now check what's actually in the returned object
+names(alpha_summ)
+
+## save some model checking diagnostic plots
+# Quick diagnostic plots - save with base graphics
+pdf("figures/trace_plots_pilots.pdf", width = 10, height = 7)
+plot(joint_fit)
+dev.off()
+
+# Or save individual diagnostic checks
+pdf("figures/rhat_check.pdf", width = 10, height = 7)
+check(joint_fit)
+dev.off()
+
+# plot prior vs posterior
+pdf("figures/mu_pars.pdf", width = 10, height = 7)
+plot_pars(joint_fit, selection = "mu")
+dev.off()
+
+pdf("figures/corr_pars.pdf", width = 10, height = 7)
+plot_pars(joint_fit, selection = "correlation")
+dev.off()
+```
+
+# 7. Parameter Recovery Analysis
+
+```{r}
+#| label: parameter-recovery
+
+## ============================================================================
+## 7.1 Extract posterior distributions using parameters()
+## ============================================================================
+
+# Define iteration and chain structure
+iter_n <- 7689
+chain_n <- 3
+
+# Extract group-level means (mu) - behavioral and pupil parameters
+mu_params <- parameters(
+  joint_fit,
+  selection = "mu"
+) |> 
+  as_tibble() |> 
+  mutate(
+    iter = rep(1:iter_n, times = chain_n),
+    chain = rep(1:chain_n, each = iter_n)
+  ) |> 
+  select(chain, iter, everything())
+
+# Extract correlations
+corr_params <- parameters(
+  joint_fit,
+  selection = "correlation"
+) |> 
+  as_tibble() |> 
+  mutate(
+    iter = rep(1:iter_n, times = chain_n),
+    chain = rep(1:chain_n, each = iter_n)
+  ) |> 
+  select(chain, iter, everything())
+
+## ============================================================================
+## 7.2 Recovery of cell means (behavioral drift rates and pupil responses)
+## ============================================================================
+
+# Convert mu parameters to long format
+mu_tidy <- mu_params |>
+  pivot_longer(
+    -c(chain, iter),
+    names_to = "parameter",
+    values_to = "value"
+  )
+
+# Calculate ground truth cell means
+ground_truth_means <- tibble(
+  parameter = c(
+    "behavior|v",
+    "behavior|v_lMd",
+    "behavior|v_conditionhard-easy",
+    "pupil|constant",
+    "pupil|condition_learned"
+  ),
+  true_value = c(
+    mean(individual_pars$v_easy + individual_pars$v_hard) / 2,  # Grand mean drift
+    1.2,                                                         # Fixed value of accuracy on drift
+    mean(individual_pars$v_hard - individual_pars$v_easy),      # Condition effect
+    mean(individual_pars$pupil_easy + individual_pars$pupil_hard) / 2,  # Mean pupil
+    mean(individual_pars$pupil_hard - individual_pars$pupil_easy)       # Pupil condition effect
+  )
+)
+
+
+
+
+
+# Define short labels for plotting
+mu_short_labels <- c(
+  "behavior|v" = "Drift",
+  "behavior|v_lMd" = "Drift Match",
+  "behavior|v_conditionhard-easy" = "Drift Δ",
+  "pupil|constant" = "Pupil",
+  "pupil|condition_hard" = "Pupil Δ"
+)
+
+# Prepare data for plotting
+mu_plot_data <- mu_tidy |>
+  filter(parameter %in% ground_truth_means$parameter) |>
+  mutate(param_label = mu_short_labels[parameter])
+
+mu_ground_truth_plot <- ground_truth_means |>
+  mutate(param_label = mu_short_labels[parameter])
+
+# Plot
+ggplot(mu_plot_data, aes(x = value, y = fct_rev(param_label))) +  
+  tidybayes::stat_halfeye(
+    fill = "#0072B2",
+    alpha = 0.7,
+    .width = c(0.66, 0.95)
+  ) +
+  geom_point(
+    data = mu_ground_truth_plot,
+    aes(x = true_value, y = fct_rev(param_label)),
+    color = "#D55E00",
+    size = 4,
+    shape = 18
+  ) +
+  labs(
+    title = "Recovery of Group-Level Parameters",
+    subtitle = "Orange diamonds show ground truth values | 66% and 95% credible intervals",
+    x = "Parameter Value",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+ggsave("figures/mu_dist_recovery.jpeg",
+       width = 10, height = 7)
+
+# Numerical summary of recovery
+cat("\n=== RECOVERY OF GROUP-LEVEL MEANS ===\n\n")
+mu_summary <- mu_tidy |>
+  filter(parameter %in% ground_truth_means$parameter) |>
+  group_by(parameter) |>
+  summarise(
+    median = median(value),
+    q025 = quantile(value, 0.025),
+    q975 = quantile(value, 0.975),
+    .groups = "drop"
+  ) |>
+  left_join(ground_truth_means, by = "parameter") |>
+  mutate(
+    bias = median - true_value,
+    coverage = true_value >= q025 & true_value <= q975,
+    relative_bias = (bias / abs(true_value)) * 100,
+    param_label = mu_short_labels[parameter]
+  ) |>
+  select(param_label, true_value, median, q025, q975, bias, relative_bias, coverage)
+
+print(mu_summary, width = Inf)
+
+## ============================================================================
+## 7.3 Recovery of correlations
+## ============================================================================
+
+# Convert correlations to long format first (keep original parameter names)
+corr_tidy <- corr_params |>
+  pivot_longer(
+    -c(chain, iter),
+    names_to = "term",
+    values_to = "value"
+  )
+
+# Calculate ground truth correlations using ORIGINAL parameter names
+ground_truth_pars <- individual_pars |>
+  mutate(
+    `behavior|v` = (v_easy + v_hard) / 2,
+    `behavior|v_conditionhard-easy` = v_hard - v_easy,
+    `pupil|constant` = (pupil_easy + pupil_hard) / 2,
+    `pupil|condition_hard` = pupil_hard - pupil_easy
+  ) |>
+  select(`behavior|v`, `behavior|v_conditionhard-easy`, `pupil|constant`, `pupil|condition_hard`)
+
+true_corrs_key <- cor(ground_truth_pars)
+
+# Create ground truth table for ALL 6 correlations
+ground_truth_corrs <- tibble(
+  term = c(
+    # Cross-modal: behavior × pupil (4 correlations)
+    "behavior|v.pupil|constant",
+    "behavior|v.pupil|condition_hard",
+    "behavior|v_conditionhard-easy.pupil|constant",
+    "behavior|v_conditionhard-easy.pupil|condition_hard",
+    # Within-behavior (1 correlation) - corrected name
+    "behavior|v_conditionhard-easy.behavior|v",
+    # Within-pupil (1 correlation)
+    "pupil|constant.pupil|condition_hard"
+  ),
+  true_value = c(
+    true_corrs_key["behavior|v", "pupil|constant"],
+    true_corrs_key["behavior|v", "pupil|condition_hard"],
+    true_corrs_key["behavior|v_conditionhard-easy", "pupil|constant"],
+    true_corrs_key["behavior|v_conditionhard-easy", "pupil|condition_hard"],
+    true_corrs_key["behavior|v", "behavior|v_conditionhard-easy"],
+    true_corrs_key["pupil|constant", "pupil|condition_hard"]
+  )
+)
+
+# Define SHORT names for all 6 correlations
+short_labels <- c(
+  "behavior|v.pupil|constant" = "Drift × Pupil",
+  "behavior|v.pupil|condition_hard" = "Drift × Pupil Δ",
+  "behavior|v_conditionhard-easy.pupil|constant" = "Drift Δ × Pupil",
+  "behavior|v_conditionhard-easy.pupil|condition_hard" = "Drift Δ × Pupil Δ",
+  "behavior|v_conditionhard-easy.behavior|v" = "Drift × Drift Δ",
+  "pupil|constant.pupil|condition_hard" = "Pupil × Pupil Δ"
+)
+
+# Filter and prepare data for plotting
+corr_plot_data <- corr_tidy |>
+  filter(term %in% ground_truth_corrs$term) |>
+  mutate(term_label = short_labels[term])
+
+ground_truth_plot <- ground_truth_corrs |>
+  mutate(term_label = short_labels[term])
+
+# Plot all 6 correlations
+ggplot(corr_plot_data, aes(x = value, y = fct_rev(term_label))) +  
+  tidybayes::stat_halfeye(
+    fill = "#0072B2",
+    alpha = 0.7,
+    .width = c(0.66, 0.95)
+  ) +
+  geom_point(
+    data = ground_truth_plot,
+    aes(x = true_value, y = fct_rev(term_label)),
+    color = "#D55E00",
+    size = 4,
+    shape = 18
+  ) +
+  labs(
+    title = "Recovery of All Correlations",
+    subtitle = "Orange diamonds show ground truth | 66% and 95% credible intervals",
+    x = "Correlation",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+ggsave("figures/corr_dist_recovery.jpeg",
+       width = 10, height = 8)  # Slightly taller for 6 rows
+
+# Numerical summary of correlation recovery
+cat("\n=== RECOVERY OF ALL 6 CORRELATIONS ===\n\n")
+corr_summary <- corr_tidy |>
+  filter(term %in% ground_truth_corrs$term) |>
+  group_by(term) |>
+  summarise(
+    median = median(value),
+    q025 = quantile(value, 0.025),
+    q975 = quantile(value, 0.975),
+    .groups = "drop"
+  ) |>
+  left_join(ground_truth_corrs, by = "term") |>
+  mutate(
+    bias = median - true_value,
+    coverage = true_value >= q025 & true_value <= q975,
+    abs_bias = abs(bias),
+    term_label = short_labels[term]
+  ) |>
+  arrange(desc(abs_bias)) |>
+  select(term_label, true_value, median, q025, q975, bias, coverage)
+
+print(corr_summary, width = Inf)
+
+
+## ============================================================================
+## 7.4 Correlation heatmaps (key parameters only)
+## ============================================================================
+
+# Helper function to convert flat correlations to matrix
+corr_vec_to_matrix <- function(corr_vec, param_names) {
+  n <- length(param_names)
+  mat <- matrix(1, nrow = n, ncol = n)
+  rownames(mat) <- colnames(mat) <- param_names
+  
+  for (col_name in names(corr_vec)) {
+    params <- str_split(col_name, "\\.", n = 2)[[1]]
+    if (length(params) == 2) {
+      i <- match(params[1], param_names)
+      j <- match(params[2], param_names)
+      if (!is.na(i) && !is.na(j)) {
+        mat[i, j] <- mat[j, i] <- corr_vec[[col_name]]
+      }
+    }
+  }
+  mat
+}
+
+# Only the 4 key parameters that vary meaningfully
+key_params <- c(
+  "behavior|v",
+  "behavior|v_lMTRUE:SLearned",
+  "behavior|v_lMFALSE:SLearned",
+  "behavior|v_lMTRUE:SNovel",
+  "behavior|v_lMFALSE:SNovel",
+  "pupil_mean|condition_learned",
+  "pupil_mean|constant",
+  "pupil_rate|condition_learned",
+  "pupil_rate|constant"
+)
+
+short_names_key <- c(
+  "behavior|v" = "Drift",
+  "behavior|v_lMTRUE:SLearned" = "Drift_learned_true",
+  "behavior|v_lMFALSE:SLearned" = "Drift_learned_false" ,
+  "behavior|v_lMTRUE:SNovel" = "Drift_novel_true",
+  "behavior|v_lMFALSE:SNovel" = "Drift_novel_false",
+  "pupil_mean|constant" = "Pupil_mean",
+  "pupil_mean|condition_learned" = "Pupil mean Δ",
+  "pupil_rate|constant" = "Pupil rate",
+  "pupil_rate|condition_learned" = "Pupil rate Δ"
+)
+
+# Calculate estimated correlation matrix (posterior medians) - 4x4
+median_corrs <- corr_params |>
+  select(-chain, -iter) |>
+  summarise(across(everything(), median))
+
+est_corr_matrix <- corr_vec_to_matrix(median_corrs, key_params)
+rownames(est_corr_matrix) <- colnames(est_corr_matrix) <- short_names_key[key_params]
+
+# Calculate ground truth correlation matrix - 4x4
+ground_truth_varying <- individual_pars |>
+  mutate(
+    `behavior|v` = (v_easy + v_hard) / 2,
+    `behavior|v_conditionhard-easy` = v_hard - v_easy,
+    `pupil|constant` = (pupil_easy + pupil_hard) / 2,
+    `pupil|condition_hard` = pupil_hard - pupil_easy
+  ) |>
+  select(all_of(key_params))
+
+true_corr_matrix <- cor(ground_truth_varying)
+rownames(true_corr_matrix) <- colnames(true_corr_matrix) <- short_names_key[key_params]
+
+# Calculate difference
+diff_corr_matrix <- est_corr_matrix - true_corr_matrix
+
+# Create plots (upper triangle only)
+p_true <- ggcorrplot::ggcorrplot(
+  true_corr_matrix,
+  method = "square",
+  type = "upper",
+  lab = TRUE,
+  lab_size = 3,
+  title = "Ground Truth",
+  legend.title = "Correlation"
+)
+p_true
+
+p_estimated <- ggcorrplot::ggcorrplot(
+  est_corr_matrix,
+  method = "square",
+  type = "upper",
+  lab = TRUE,
+  lab_size = 3,
+  title = "Estimated",
+  legend.title = "Correlation"
+)
+p_estimated
+
+ggsave("figures/corr_matrix_joint.jpeg", width = 18, height = 10, dpi = 800) 
+
+p_diff <- ggcorrplot::ggcorrplot(
+  diff_corr_matrix,
+  method = "square",
+  type = "upper",
+  lab = TRUE,
+  lab_size = 3,
+  title = "Error (Est − True)",
+  legend.title = "Correlation"
+)
+p_diff
+
+# Combine plots
+(p_true | p_estimated | p_diff) +
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    title = "Correlation Matrix Recovery (Key Parameters)",
+    theme = theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+  )
+
+ggsave("figures/corr_mat_recovery.jpeg",
+       width = 10, height = 7)
+
+## ============================================================================
+## 7.5 Overall recovery summary
+## ============================================================================
+
+cat("\n=== OVERALL RECOVERY SUMMARY ===\n\n")
+
+# Combine all recovery metrics
+cat("GROUP-LEVEL PARAMETERS:\n")
+mu_summary <- mu_tidy |>
+  filter(parameter %in% ground_truth_means$parameter) |>
+  group_by(parameter) |>
+  summarise(
+    median = median(value),
+    q025 = quantile(value, 0.025),
+    q975 = quantile(value, 0.975),
+    .groups = "drop"
+  ) |>
+  left_join(ground_truth_means, by = "parameter") |>
+  mutate(
+    bias = median - true_value,
+    coverage = true_value >= q025 & true_value <= q975
+  )
+
+print(mu_summary, width = Inf)
+
+cat("\n\nKEY CORRELATIONS:\n")
+corr_summary <- corr_tidy |>
+  filter(term %in% ground_truth_corrs$term) |>
+  group_by(term) |>
+  summarise(
+    median = median(value),
+    q025 = quantile(value, 0.025),
+    q975 = quantile(value, 0.975),
+    .groups = "drop"
+  ) |>
+  left_join(ground_truth_corrs, by = "term") |>
+  mutate(
+    bias = median - true_value,
+    coverage = true_value >= q025 & true_value <= q975
+  )
+
+print(corr_summary, width = Inf)
+
+cat("\n\nCOVERAGE RATES:\n")
+cat("Parameters:", mean(mu_summary$coverage) * 100, "% coverage\n")
+cat("Correlations:", mean(corr_summary$coverage) * 100, "% coverage\n")
+
+cat("\n\nMEAN ABSOLUTE BIAS:\n")
+cat("Parameters:", mean(abs(mu_summary$bias)), "\n")
+cat("Correlations:", mean(abs(corr_summary$bias)), "\n")
+```
+
+
+# 8. Posterior Predictive Check
+
+```{r}
+#| label: ppc
+
+pp <- predict(joint_fit, n_post = 100, n_cores = 24)
+
+# ============================================================================
+# BEHAVIORAL POSTERIOR PREDICTIVE CHECKS
+# ============================================================================
+
+cat("=== BEHAVIORAL POSTERIOR PREDICTIVE CHECKS ===\n\n")
+
+# Density plots
+pdf("figures/pp_density.pdf", width = 10, height = 7)
+plot_density(
+  behav_data_test,
+  post_predict = pp[[2]],  # Behavioral component
+  factors = c("S", "R"),
+  defective_factor = "R"
+)
+dev.off()
+
+# CDF plots
+pdf("figures/pp_cdf.pdf", width = 10, height = 7)
+plot_cdf(
+  behav_data,
+  post_predict = pp[[2]],
+  factors = c("condition", "R"),
+  defective_factor = "R"
+)
+dev.off()
+```

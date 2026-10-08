@@ -1,0 +1,656 @@
+---
+title: "wrangle"
+author: "Fournier Raphaël"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This file wrangles the pilot data for the familiarity face perception study.
+
+## load the libraries that we will be using ## 
+
+## install ##
+
+```{r install-pkg}
+#install.packages(c("tidyverse", "RColorBrewer", "patchwork", "gtsummary"))
+```
+
+take a snapshot of loaded packages and update the lock.file using renv
+
+```{r snapshot-renv}
+# take a snapshot and update the lock.file
+renv::snapshot() # this is only necessary when new packages or installed or packages are updated.
+```
+
+## load ##
+
+```{r load-pkg}
+pkg <- c("tidyverse", "RColorBrewer", "patchwork", "gtsummary", "paletteer", "here")
+
+lapply(pkg, library, character.only = TRUE)
+
+## Set the amount of dodge in figures
+pd <- position_dodge(0.7)
+pd2 <- position_dodge(1)
+
+## Theme settings for ggplot
+theme_set(
+  theme_bw() +
+    theme(text = element_text(size = 20), 
+          title = element_text(size = 22),
+          legend.position = "bottom")
+)
+
+#Colors
+myColors <- c("Novel" = paletteer_d("rcartocolor::Safe",4)[1],"Learned" =  paletteer_d("rcartocolor::Safe",4)[2])
+```
+
+
+
+# 1. Read in behavioural data
+
+```{r}
+# Set the file path
+
+#Without blocks!!!
+raw <- list.files(
+    path = here("data/behavioural_data"),
+    pattern = "*csv",
+    full.names = TRUE,
+    recursive = TRUE
+  ) %>%
+  set_names() %>%
+  map_dfr(read_csv, col_types = cols(Gender = col_character()))
+```
+
+#Saving raw data
+```{r}
+write_csv(raw, here("data", "raw_behav_data_WP3.csv"))
+
+raw <- read_csv(here("data", "raw_behav_data_WP3.csv"))
+```
+
+
+
+# 2. Wrangle: face recognition task
+
+```{r}
+#Wrangle the raw data to extract the face recognition task data
+n_blocks      <- 3
+trials_per_block <- 60   # 180 trials total per participant
+
+data <- raw %>%
+  filter(!is.na(trial_in_block)) %>%
+  rename(trial = recog_trial.thisN,cond = familiarity, acc = key_resp_5.corr, rt = key_resp_5.rt, pid = participant) %>%
+  mutate(trial = trial+1) %>%
+  relocate(pid, .before = cond) %>%
+  select(pid, trial,acc, cond, rt, block) %>%
+  relocate(any_of(c("block", "cond")), .before = acc) %>%
+  arrange(pid) %>%
+  mutate(cond = fct_recode(cond, Novel = "unfamiliar", Learned = "learned"))
+
+```  
+
+---
+
+# 3. Exclusions: face recognition task
+
+Each stage below tracks how many participants are removed and why.
+
+```{r}
+#| label: exclusion-tracking
+
+# Helper: count remaining pids
+n_pids <- function(df) length(unique(df$pid))
+
+# Running exclusion log — we'll append to this
+excl_log <- tibble(
+  stage     = character(),
+  criterion = character(),
+  n_removed = integer(),
+  n_remain  = integer()
+)
+
+log_exclusion <- function(log, stage, criterion, before, after) {
+  bind_rows(log, tibble(
+    stage     = stage,
+    criterion = criterion,
+    n_removed = as.integer(before - after),
+    n_remain  = as.integer(after)
+  ))
+}
+
+n_start <- n_pids(data)
+```
+
+## 3.1 Missed trials (> 40% NA rt)
+
+```{r}
+#| label: excl-missed
+total_trials   <- n_blocks * trials_per_block  # 180
+missed_thresh  <- 0.40
+
+missed_summary <- data |>
+  group_by(pid) |>
+  summarise(n_missed = sum(is.na(rt)), .groups = "drop") |>
+  mutate(prop_missed = n_missed / total_trials)
+
+pids_missed <- missed_summary |>
+  filter(prop_missed > missed_thresh) |>
+  pull(pid)
+
+data_excl1 <- data |> filter(!pid %in% pids_missed)
+
+excl_log <- log_exclusion(
+  excl_log, "1", 
+  glue::glue("> {missed_thresh * 100}% missed trials"),
+  n_start, n_pids(data_excl1)
+)
+
+# Visualise missed-trial distribution
+missed_trials_plot <- missed_summary |>
+  mutate(excluded = pid %in% pids_missed) |>
+  ggplot(aes(x = prop_missed, fill = excluded)) +
+  geom_histogram(binwidth = 0.02, colour = "white") +
+  geom_rug(data = ~filter(., excluded), 
+           aes(colour = excluded), sides = "b", linewidth = 1) +
+  geom_vline(xintercept = missed_thresh, linetype = "dashed", colour = "red") +
+  scale_fill_manual(values = c("FALSE" = "steelblue", "TRUE" = "tomato"),
+                    labels = c("Retained", "Excluded")) +
+  labs(
+    title = "Proportion of missed trials",
+    x     = "Proportion missed",
+    y     = "Count",
+    fill  = NULL
+  )
+missed_trials_plot
+```
+## 3.2 RT range violations (> 25% of trials outside 0.2–2.0 s)
+
+```{r}
+#| label: excl-rt-range
+
+rt_lo   <- 0.2
+rt_hi   <- 2.5
+rt_thresh <- 0.25   # > 25% violations → exclude
+
+rt_check <- data_excl1 |>
+  filter(!is.na(rt)) |>
+  group_by(pid) |>
+  summarise(
+    n_trials      = n(),
+    n_out_of_range = sum(rt < rt_lo | rt > rt_hi),
+    prop_out       = n_out_of_range / n_trials,
+    .groups        = "drop"
+  )
+
+pids_rt <- rt_check |>
+  filter(prop_out > rt_thresh) |>
+  pull(pid)
+
+data_excl2 <- data_excl1 |> filter(!pid %in% pids_rt)
+
+excl_log <- log_exclusion(
+  excl_log, "2",
+  glue::glue("> {rt_thresh * 100}% RT outside [{rt_lo}, {rt_hi}] s"),
+  n_pids(data_excl1), n_pids(data_excl2)
+)
+
+# Visualise RT violation distribution
+rt_check_plot <- rt_check |>
+  mutate(excluded = pid %in% pids_rt) |>
+  ggplot(aes(x = prop_out, fill = excluded)) +
+  geom_histogram(binwidth = 0.02, colour = "white") +
+  geom_rug(data = ~filter(., excluded), 
+           aes(colour = excluded), sides = "b", linewidth = 1) +
+  geom_vline(xintercept = rt_thresh, linetype = "dashed", colour = "red") +
+  scale_fill_manual(values = c("FALSE" = "steelblue", "TRUE" = "tomato"),
+                    labels = c("Retained", "Excluded")) +
+  labs(
+    title = "Proportion of RTs",
+    x     = "Proportion out of range",
+    y     = "Count",
+    fill  = NULL
+  )
+rt_check_plot
+```
+## 3.3 Accuracy floor (< 55%) and ceiling (> 95%)
+
+```{r}
+#| label: excl-accuracy
+
+acc_lo <- 55
+acc_hi <- 95
+
+# Remove out-of-range RTs before accuracy check (trial-level filter)
+data_valid_rt <- data_excl2 |>
+  filter(!is.na(rt), rt >= rt_lo, rt <= rt_hi)
+
+acc_check <- data_valid_rt |>
+  group_by(pid) |>
+  summarise(
+    n_trials = n(),
+    n_correct = sum(acc),
+    perc_acc  = n_correct / n_trials * 100,
+    .groups   = "drop"
+  )
+
+pids_acc_floor   <- acc_check |> filter(perc_acc < acc_lo) |> pull(pid)
+pids_acc_ceiling <- acc_check |> filter(perc_acc > acc_hi) |> pull(pid)
+pids_acc         <- union(pids_acc_floor, pids_acc_ceiling)
+
+data_excl3 <- data_valid_rt |> filter(!pid %in% pids_acc)
+
+excl_log <- log_exclusion(
+  excl_log, "3a",
+  glue::glue("Accuracy < {acc_lo}%"),
+  n_pids(data_valid_rt), n_pids(data_valid_rt) - length(pids_acc_floor)
+)
+excl_log <- log_exclusion(
+  excl_log, "3b",
+  glue::glue("Accuracy > {acc_hi}%"),
+  n_pids(data_valid_rt) - length(pids_acc_floor),
+  n_pids(data_excl3)
+)
+
+# Visualise accuracy distribution
+acc_check_plot <- acc_check |>
+  mutate(
+    excluded = case_when(
+      perc_acc < acc_lo ~ "Floor",
+      perc_acc > acc_hi ~ "Ceiling",
+      TRUE              ~ "Retained"
+    ),
+    excluded = factor(excluded, levels = c("Retained", "Floor", "Ceiling"))
+  ) |>
+  ggplot(aes(x = perc_acc, fill = excluded)) +
+  geom_histogram(binwidth = 2, colour = "white") +
+  geom_rug(data = ~filter(., excluded %in% c("Floor", "Ceiling")), 
+           aes(colour = excluded), sides = "b", linewidth = 0.25) +
+  geom_vline(xintercept = c(acc_lo, acc_hi), linetype = "dashed", colour = "red") +
+  scale_fill_manual(
+    values = c("Retained" = "steelblue", "Floor" = "tomato", "Ceiling" = "orange")
+  ) +
+  labs(
+    title = "Accuracy",
+    x     = "Accuracy (%)",
+    y     = "Count",
+    fill  = NULL
+  )
+acc_check_plot
+```
+## 3.4 Behavioural exclusion summary
+
+```{r}
+#| label: excl-summary
+
+excl_log |>
+  knitr::kable(
+    col.names = c("Stage", "Criterion", "N removed", "N remaining"),
+    caption   = "Participant exclusions — face recognition task"
+  )
+
+cat(
+  "\nFinal N (face recognition task):", n_pids(data_excl3), "\n",
+  "Started with:", n_start, "\n",
+  "Total excluded:", n_start - n_pids(data_excl3), "\n"
+)
+
+write_csv(excl_log, "data/exclusions.csv")
+
+## and plot
+p_exclusions <- missed_trials_plot | rt_check_plot | acc_check_plot
+p_exclusions
+
+ggsave("figures/descriptive/data_exclusions.png",
+       width = 15, height = 7)
+```
+
+
+#Exclusion pupil data
+```{r}
+data_clean <- data_excl3 %>%
+  filter(!pid =="003")
+
+  
+write_csv(data_clean, "data/data.csv")
+```
+
+#Saving demo_data
+```{r}
+age_demo <- read_csv("data/Master_list.csv") |>
+  filter(!is.na(AGE))
+demo_WP3 <- raw %>%
+  select(participant, `Dominant eye`, Gender, Handedness)
+demo_WP3 <- demo_WP3[complete.cases(demo_WP3),]
+demo_WP3 <- demo_WP3 %>%
+  unique() |>
+  mutate(age = age_demo$AGE) |>
+  filter(participant %in% data_clean$pid)
+
+write_csv(demo_WP3, here("data","data_demo_WP3.csv"))
+```
+## section 3 - create summary data ##
+
+first, create summary data for rt and accuracy at the pid level and at the 
+group level for three tasks
+
+### rt ###
+at the pid level
+```{r}
+rt_pid <- exp_3_data %>% 
+  group_by(pid, block, cond) %>%
+  summarise(mean = mean(rt),
+            sd = sd(rt),
+            n = n(), # n here is the total trials per grouping
+            sem = (sd/sqrt(n)),
+            ci = sem*1.96)
+rt_pid
+```
+
+at the group level
+
+```{r}
+rt_group <- exp_3_data %>% 
+  group_by(block, cond) %>% 
+  drop_na(rt) %>%
+  summarise(mean = mean(rt),
+            sd = sd(rt),
+            n = length(unique(pid)), # n here is the total subjs
+            sem = (sd/sqrt(n)),
+            ci = sem*1.96)
+rt_group
+```
+
+### acc ###
+
+at the pid level
+
+```{r}
+acc_pid <- exp_3_data %>% 
+  group_by(pid, block, cond) %>% 
+  summarise(sum = sum(acc),
+            n = n(), # n here is the total trials per grouping
+            perc = sum/n*100)
+acc_pid
+```
+
+at the group level
+
+```{r}
+acc_group <- acc_pid %>% 
+  group_by(block, cond) %>% 
+  summarise(mean_sum = mean(sum),
+            n = n(), # n here is the total trials per grouping
+            mean_perc = mean(perc),
+            sd=sd(perc),
+            sem = (sd/sqrt(n))) %>% 
+  rename(sum=mean_sum, perc=mean_perc)
+acc_group
+```
+
+
+### Without block ###
+
+## rt group ##
+```{r}
+rt_group_wblock <- exp_3_data %>% 
+  group_by(cond) %>% 
+  drop_na(rt) %>%
+  summarise(mean = mean(rt),
+            sd = sd(rt),
+            n = length(unique(pid)), # n here is the total subjs
+            sem = (sd/sqrt(n)),
+            ci = sem*1.96)
+rt_group_wblock
+```
+## rt pid ##
+```{r}
+rt_pid_wblock <- exp_3_data %>% 
+  group_by(pid,cond) %>% 
+  drop_na(rt) %>%
+  summarise(mean = mean(rt),
+            sd = sd(rt),
+            n = length(unique(pid)), # n here is the total subjs
+            sem = (sd/sqrt(n)),
+            ci = sem*1.96) %>%
+  left_join(rt_group_wblock,by = join_by(cond))
+
+rt_pid_wblock
+```
+
+
+## acc group ##
+```{r}
+acc_group_wblock <- acc_pid %>% 
+  group_by(cond) %>% 
+  summarise(mean_sum = mean(sum),
+            n = n(), # n here is the total trials per grouping
+            mean_perc = mean(perc),
+            sd=sd(perc),
+            sem = (sd/sqrt(n))) %>% 
+  rename(sum=mean_sum, perc=mean_perc)
+acc_group_wblock
+```
+## acc pid ##
+
+```{r}
+acc_pid_wblock <- acc_pid %>% 
+  group_by(pid,cond) %>% 
+  summarise(mean_sum = mean(sum),
+            n = n(), # n here is the total trials per grouping
+            mean_perc = mean(perc),
+            sd=sd(perc),
+            sem = (sd/sqrt(n))) %>% 
+  rename(sum=mean_sum, perc=mean_perc) %>%
+  left_join(acc_group_wblock, by = join_by(cond))
+acc_pid_wblock
+```
+
+## section 4 - plot ##
+
+just a few quick and dirty plots for now
+
+
+## Face recognition experiment ##
+
+density
+
+rt
+
+```{r}
+p4.1 <- ggplot(exp_3_data, aes(x=rt, fill=cond, colour=cond)) +
+   geom_density(alpha=0.5) +
+   scale_fill_manual(values = myColors) +
+   scale_color_manual(values = myColors) +
+   facet_grid(~block) +  
+   ggtitle("Response time by block and condition") +
+   xlab("Response time [s]") +
+   ylab("Density") +
+   xlim(0,3)
+p4.1
+
+ggsave("figures/rt_density_pid.jpeg",
+       width = 8, height = 6)
+```
+
+acc
+
+```{r}
+p4.2 <- ggplot(exp_3_data, aes(x=acc, fill=cond, colour=cond)) +
+   geom_density(alpha=0.5) +
+   scale_fill_manual(values = myColors) +
+   scale_color_manual(values = myColors) +
+   ggtitle("Accuracy by block and condition") +
+   facet_wrap(~block) +
+   xlab("Accuracy") +
+   ylab("Density")  
+p4.2 
+
+#ggsave("/Users/rfournier/Rstudio/pilot5_dmc/figures_exp_1/acc_density_pid.jpeg",
+       #width = 8, height = 6)
+```
+
+summary plots
+
+rt
+
+```{r}
+p4.3 <- ggplot(rt_pid, aes(x=block, y=mean, 
+                           fill=cond, colour=cond)) +
+   geom_point(alpha = 3) +
+   geom_line(aes(group = cond)) +
+   scale_fill_manual(values = myColors) +
+   scale_color_manual(values = myColors) +
+   ggtitle("Mean response time by block and condition") +
+   facet_wrap(~pid) +
+   xlab("Blocks") +
+   ylab("Mean response time [s]") +
+  ylim(0,3)
+p4.3
+
+ggsave("figures/rt_line_pid.jpeg",
+      width = 15, height = 12)
+```
+
+acc
+
+```{r}
+p4.4 <- ggplot(acc_pid, aes(x=block, y=perc, 
+                           fill=cond, colour=cond)) +
+   geom_point(alpha = 3) +
+   geom_line(aes(group = cond)) +
+   scale_fill_manual(values = myColors) +
+   scale_color_manual(values = myColors) +
+   ggtitle("Accuracy by block and condition") +
+   facet_wrap(~pid) +
+   xlab("Blocks") +
+   ylab("Accuracy [%]") + ylim(c(0,100))
+  
+p4.4
+
+ggsave("figures/acc_line_pid.jpeg",
+       width = 15, height = 12)
+```
+
+group level summary data
+
+rt
+
+```{r}
+p4.5 <- ggplot(rt_group, aes(x=block, y=mean, 
+                           fill=cond, colour=cond)) +
+   geom_point(alpha = 3, position = pd2) +
+   geom_line(aes(group = cond), position = pd2) +
+   geom_errorbar(aes(ymin = mean-sem, ymax = mean+sem),
+                width=.2, position=pd2) +
+   scale_fill_manual(values = myColors) +
+   scale_color_manual(values = myColors) +
+   ggtitle("Response time by block and condition") +
+   xlab("Blocks") +
+   ylab("Mean response time [s]") +
+   ylim(0,2)
+p4.5
+
+ggsave("figures/rt_line_group.jpeg",
+        width = 8, height = 6)
+```
+
+acc
+
+```{r}
+p4.6 <- ggplot(acc_group, aes(x=block, y=perc, 
+                           fill=cond, colour=cond)) +
+   geom_point(alpha = 3, position = pd2) +
+   geom_line(aes(group = cond), position = pd2) +
+   geom_errorbar(aes(ymin = perc-sem, ymax = perc+sem),
+                width=.2, position=pd2) +
+   scale_fill_manual(values = myColors) +
+   scale_color_manual(values = myColors) +
+   ggtitle("Accuracy by block and condition") +
+   xlab("Blocks") +
+   ylab("Accuracy [%]") +
+   ylim(0,100)
+
+p4.6
+
+ggsave("figures/acc_line_group.jpeg",
+        width = 8, height = 6)
+```
+
+plot group data together
+
+```{r}
+p4.7 <- p4.5 | p4.6
+p4.7
+
+ggsave("figures/rt_acc_line_pilot.jpeg",
+        width = 15, height = 6)
+```
+
+barplot rt
+```{r}
+p.4.11 <- ggplot(rt_pid_wblock, aes(x = cond,y=mean.y, 
+                           fill=cond, colour=cond)) +
+   geom_bar(stat = "summary") +
+   geom_errorbar(aes(ymin = mean.y-sem.y, ymax = mean.y+sem.y), col = "black",
+                width=.2, position=pd2) +
+  geom_point(aes(y = mean.x),
+             colour = "black",
+             stat = "identity",
+             position=pd2,
+             alpha = .7) +
+   scale_fill_manual(values = myColors) +
+   scale_color_manual(values = myColors) +
+   ggtitle("Response time by condition") +
+   xlab("Conditions") +
+   ylab("Response time [s]") +
+   ylim(0,2) +
+  theme(legend.position = "none")
+
+p.4.11
+
+ggsave("figures/rt_barplot_group.jpeg",
+        width = 6, height = 8)
+```
+
+
+barplot acc
+```{r}
+p.4.12 <- ggplot(acc_pid_wblock, aes(x = cond,y=perc.y, 
+                           fill=cond, colour=cond)) +
+   geom_bar(stat = "summary") +
+   geom_errorbar(aes(ymin = perc.y-sem.y, ymax = perc.y+sem.y), col = "black",
+                width=.2, position=pd2) +
+    geom_point(aes(y = perc.x),
+             colour = "black",
+             stat = "identity",
+             position=pd2,
+             alpha = .7)+
+   scale_fill_manual(values = myColors) +
+   scale_color_manual(values = myColors) +
+   ggtitle("Accuracy by condition") +
+   xlab("Conditions") +
+   ylab("Accuracy [%]") +
+   ylim(0,100) +
+  theme(legend.position = "none")
+
+p.4.12
+
+ggsave("figures/acc_barplot_group.jpeg",
+        width = 6, height = 8)
+```
+
+Two barplots together 
+```{r}
+p.4.13 <- p.4.11 | p.4.12
+p.4.13
+
+ggsave("figures/acc_rt_barplot_group.jpeg",
+        width = 15, height = 10)
+```
+

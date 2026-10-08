@@ -1,0 +1,1609 @@
+---
+title: "wrangle"
+author: "Rich"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This file wrangles, summarises and plots pupil data from Exp1 in the reward and 
+motor slowing project.
+
+This is just a demo/example.
+
+# load the libraries that we will be using #
+
+## install ##
+
+```{r install-pkg}
+#install.packages(c("tidyverse", "RColorBrewer", "patchwork"))
+```
+
+take a snapshot of loaded packages and update the lock.file using renv
+
+```{r snapshot-renv}
+# take a snapshot and update the lock.file
+# renv::snapshot() # this is only necessary when new packages or installed or packages are updated.
+```
+
+## load ##
+
+```{r load-pkg}
+pkg <- c("tidyverse", "RColorBrewer", "patchwork", "paletteer")
+
+lapply(pkg, library, character.only = TRUE)
+```
+
+## plot settings ##
+
+theme settings for ggplot
+
+```{r plot-settings}
+theme_set(
+  theme_bw() +
+    theme(text = element_text(size = 18, face = "bold"), 
+          title = element_text(size = 18, face = "bold"),
+          legend.position = "bottom")
+)
+
+## Set the amount of dodge in figures
+pd <- position_dodge(0.7)
+pd2 <- position_dodge(1)
+
+myColors_accuracy <- c("false" = RColorBrewer::brewer.pal(8, "Dark2")[4],"true" =  RColorBrewer::brewer.pal(8, "Dark2")[5])
+
+myColors <- c("Novel" = paletteer_d("rcartocolor::Safe",4)[1],"Learned" =  paletteer_d("rcartocolor::Safe",4)[2])
+```
+
+# section 1 #
+
+## read in the raw data or preprocessed data ##
+
+This data has already been preprocessed and wrangled. If you want to see how I wrangled the raw data to this point, I can send you the code. Just email me.
+
+For modelling using gams, I kept the sampling rate fairly low/sparse (5Hz), to reduce autocorrelation issues and to make the modelling faster as this is just a demo. In this particular case, where the experimental manipulation lasts for 20s, I don't think it really matters if the sampling rate is 5hz or 50Hz. Of course, I could see other situations where more data would be important.
+
+See Fink et al., 2024 (and van rij et al., 2019) for more info. on getting timeseries data setup and ready for modelling with gams.
+
+The basic logic is as follows:
+
+First, they suggested using a maximum sampling rate of 50hz to reduce autocorrelatino issues and ease model building time. Models take an age to build even at 50Hz.
+
+Also, they suggested NOT removing NANs (for GAMMs) and instead picking a sampling rate and then averaging over the non-NAN data in that window. e.g., if 1000Hz data, then keep all NANs and then choose a window (e.g., 100 samples and then create an average using mean, na.rm = TRUE). I think this makes sense and has the benefit of more pt data. The only way you could have missing data is if there were longer sequences of nans (that cover the entire sampling rate i.e., 0.2s or whatever), which is possible with this kind of data, but it should be minimised by averaging over a longer timeframe.
+
+This is all of the data (N=18).
+
+```{r read-processed-data}
+## all of the data
+data_all <- read_csv("data/pupil_data/processed/data/all_subjects_binned.csv") %>%
+    rename(time = Time, 
+           pid = Subject,
+           trial = Trial)
+removed_trials <- read_csv("data/removed_trials.csv")
+
+head(data_all)
+str(data_all)
+summary(data_all)
+
+data_all <- anti_join(data_all, removed_trials, by = c("pid", "trial"))
+
+data_all <- data_all %>%
+  filter(!pid == "003",
+         !pid == "016",
+         !pid == "033")
+
+write_csv(data_all, "data/clean_pupil_data_binned.csv")
+
+
+## ---------------------------------------------------------------
+## Downsample pupil diameter data by binning `time` into fixed windows
+## and averaging Pupil_Diameter_bc.mm and Pupil_Diameter_change_smoothed_bc.mm within each bin.
+## ---------------------------------------------------------------
+
+# ------------------------------------------------------------------
+# 1. Set your target bin width (in the same units as `time`, likely ms)
+# ------------------------------------------------------------------
+# Original data looks like it's sampled at 1000 Hz (1 row per ms, since
+# `time` decrements by 1 each row). Common downsampling targets in
+# pupillometry: 50 Hz (bin_width = 20) or 20 Hz (bin_width = 50).
+# Adjust to match your sampling rate and desired resolution.
+
+bin_width <- 20   # ms per bin -> 50 Hz effective sampling rate
+
+# ------------------------------------------------------------------
+# 2. Downsample
+# ------------------------------------------------------------------
+# Bins are computed per trial (grouped by pid + trial) so bin edges
+# align to each trial's own timeline rather than a global clock.
+
+data_ds <- data_all %>%
+  group_by(pid, trial) %>%
+  mutate(time_bin = floor(time / bin_width) * bin_width) %>%
+  group_by(pid, trial, time_bin) %>%
+  summarise(
+    time = mean(time, na.rm = TRUE),  # midpoint-ish time for the bin
+    Pupil_Diameter_bc.mm = mean(Pupil_Diameter_bc.mm, na.rm = TRUE),
+    Pupil_Diameter_change_smoothed_bc.mm = mean(Pupil_Diameter_change_smoothed_bc.mm, na.rm = TRUE),
+
+    # Keep other columns if you need them downstream — adjust as needed.
+    # For categorical columns like Stimulus/int_cond that shouldn't change
+    # within a trial, `first()` just carries the label through.
+    Stimulus = first(Stimulus),
+    condition = first(condition),
+    accuracy = first(accuracy),
+    rt = first(rt),
+    # int_cond = first(int_cond),
+
+    n_samples = n(),  # how many raw samples went into this bin — useful
+                       # to check for uneven bins (e.g. near trial edges)
+    .groups = "drop"
+  ) %>%
+  select(-time_bin) %>%
+  arrange(pid, trial, time)
+
+# ------------------------------------------------------------------
+# 3. Sanity checks
+# ------------------------------------------------------------------
+
+# Confirm the downsampling worked as expected
+nrow(data_all)     # original N
+nrow(data_ds)  # should be roughly original / (bin_width / original_hz_step)
+
+# Check for irregular bins (e.g. very short trailing bin at trial end)
+data_ds %>%
+  count(n_samples) %>%
+  arrange(n_samples)
+
+# Quick visual check: overlay raw vs downsampled for one trial
+check_pid   <- data_all$pid[1]
+check_trial <- data_all$trial[1]
+
+ggplot() +
+  geom_line(data = data_all %>% filter(pid == check_pid, trial == check_trial),
+            aes(x = time, y = Pupil_Diameter_bc.mm), colour = "grey70", alpha = 0.6) +
+  geom_line(data = data_ds %>% filter(pid == check_pid, trial == check_trial),
+            aes(x = time, y = Pupil_Diameter_bc.mm), colour = "steelblue", linewidth = 1) +
+  labs(title = paste("Raw (grey) vs downsampled (blue) — pid", check_pid, "trial", check_trial),
+       x = "Time (ms)", y = "Pupil diameter (bc, mm)") +
+  theme_minimal()
+
+write_csv(data_ds,"data/pupil_data_clean_ds.csv")
+```
+
+```{r}
+check_baseline_cond <- data_all %>%
+  filter(Stimulus == "fixation_baseline",
+         time < 0 & time > -200) %>%
+    mutate(pid = as.factor(pid),
+         condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"),
+         condition = as.factor(condition)) |>
+  group_by(condition) %>%
+  summarise(mean_baseline = mean((`L_Pupil_Diameter.mm` + `R_Pupil_Diameter.mm`)/2, na.rm = TRUE),
+            n = length(unique(pid)),
+            sd = sd((`L_Pupil_Diameter.mm` + `R_Pupil_Diameter.mm`)/2, na.rm = TRUE),
+            sem = (sd/sqrt(n)))
+
+check_baseline_pid <- data_all |>
+  filter(Stimulus == "fixation_baseline",
+         time < 0 & time > -200) |>
+  mutate(pid = as.factor(pid),
+         condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"),
+         condition = as.factor(condition)) |>
+  group_by(pid,condition) |>
+  summarise(mean_baseline = mean((`L_Pupil_Diameter.mm` + `R_Pupil_Diameter.mm`)/2, na.rm = TRUE),
+            n = length(unique(pid)),
+            sd = sd((`L_Pupil_Diameter.mm` + `R_Pupil_Diameter.mm`)/2, na.rm = TRUE),
+            sem = (sd/sqrt(n)),
+            ci = sem*1.96) |> # n here is the total trials per grouping)
+  left_join(check_baseline_cond, by = join_by(condition))
+
+```
+
+
+#Plot baseline
+```{r}
+check_baseline_pid <- check_baseline_pid |>
+  mutate(pid = as.factor(pid))
+
+plot_baseline <- ggplot(check_baseline_pid, aes(x = condition,y = mean_baseline.y, 
+                           fill=condition, colour=condition)) +
+   geom_bar(stat = "summary") +
+   geom_errorbar(aes(ymin = mean_baseline.y-sem.y, ymax = mean_baseline.y+sem.y), col = "black",
+                width=.2, position=pd2) +
+  geom_line(aes(y = mean_baseline.x,group = pid), color = "gray40", alpha = 0.4) +
+  geom_point(aes(y = mean_baseline.x),
+             colour = "black",
+             stat = "identity",
+             position=pd2,
+             alpha = .7) +
+   scale_fill_manual(values = myColors) +
+   scale_color_manual(values = myColors) +
+   ggtitle("Baseline pupil size by condition") +
+   xlab("Conditions") +
+   ylab("Baseline pupil size [mm]") +
+   ylim(0,7) +
+  theme(legend.position = "none")
+  
+ggsave("figures/baseline.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+
+
+# section 2 #
+
+## create summary data for plotting ##
+
+at the pid level
+
+## Pupil diameter trace ##
+
+```{r}
+data_all_pid_diam <- data_all %>%
+  group_by(pid, condition, time) %>% 
+  summarise(mean = mean(Pupil_Diameter_bc.mm, na.rm = TRUE),
+            sd = sd(Pupil_Diameter_bc.mm, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Addin accuracy for plotting
+data_all_pid_diam_acc <- data_all %>%
+  group_by(pid, condition, time, accuracy) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%
+  mutate(accuracy = as.factor(accuracy),
+         accuracy = fct_recode(accuracy, true = "1", false = "0"),
+         condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Correct responses
+data_all_pid_diam_corr <- data_all %>%
+  filter(accuracy == 1) %>%
+  group_by(pid, condition, time) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Incorrect responses
+data_all_pid_diam_incorr <- data_all %>%
+  filter(accuracy == 0) %>%
+  group_by(pid, condition, time) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+```
+
+
+## Rate of pupil trace change ##
+
+```{r}
+data_all_pid_change <- data_all %>%
+  group_by(pid, condition, time) %>% 
+  summarise(mean = mean(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Adding accuracy for plotting
+data_all_pid_change_acc <- data_all %>%
+  group_by(pid, condition, time, accuracy) %>% 
+  summarise(mean = mean(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%
+  mutate(accuracy = as.factor(accuracy),
+         accuracy = fct_recode(accuracy, true = "1", false = "0"),
+         condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Correct responses
+data_all_pid_change_corr <- data_all %>%
+  filter(accuracy == 1) %>%
+  group_by(pid, condition, time) %>% 
+  summarise(mean = mean(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Incorrect responses
+data_all_pid_change_incorr <- data_all %>%
+  filter(accuracy == 0) %>%
+  group_by(pid, condition, time) %>% 
+  summarise(mean = mean(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+```
+
+## create summary data for plotting ##
+
+at the group level
+
+```{r}
+data_all_group_diam <- data_all %>%
+  group_by(condition, time) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(pid)), # n here is the total pids per condition
+            sem = (sd/sqrt(length(unique(pid)))),
+            ci = sem*1.96) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Adding accuracy for plotting
+data_all_group_diam_acc <- data_all %>%
+  group_by(condition, time, accuracy) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(pid)), # n here is the total pids per condition
+            sem = (sd/sqrt(length(unique(pid)))),
+            ci = sem*1.96) %>%
+  mutate(accuracy = as.factor(accuracy),
+         accuracy = fct_recode(accuracy, true = "1", false = "0"),
+         condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Correct responses
+data_all_group_diam_corr <- data_all %>%
+  filter(accuracy == 1) %>%
+  group_by(condition, time) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(pid)), # n here is the total pids per condition
+            sem = (sd/sqrt(length(unique(pid)))),
+            ci = sem*1.96) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Incorrect responses
+data_all_group_diam_incorr <- data_all %>%
+  filter(accuracy == 0) %>%
+  group_by(condition, time) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(pid)), # n here is the total pids per condition
+            sem = (sd/sqrt(length(unique(pid)))),
+            ci = sem*1.96) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+```
+
+## Rate of pupil trace change ##
+
+```{r}
+data_all_group_change <- data_all %>%
+  group_by(condition, time) %>% 
+  summarise(mean = mean(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            n = length(unique(pid)), # n here is the total pids per condition
+            sem = (sd/sqrt(length(unique(pid)))),
+            ci = sem*1.96, 
+            rt = mean(rt))%>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Adding accuracy for plotting
+data_all_group_change_acc <- data_all %>%
+  group_by(condition, time, accuracy) %>% 
+  summarise(mean = mean(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            n = length(unique(pid)), # n here is the total pids per condition
+            sem = (sd/sqrt(length(unique(pid)))),
+            ci = sem*1.96, 
+            rt = mean(rt)) %>%
+  mutate(accuracy = as.factor(accuracy),
+         accuracy = fct_recode(accuracy, true = "1", false = "0"),
+         condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Correct responses
+data_all_group_change_corr <- data_all %>%
+  filter(accuracy == 1) %>%
+  group_by(condition, time) %>%
+  summarise(mean = mean(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            n = length(unique(pid)), # n here is the total pids per condition
+            sem = (sd/sqrt(length(unique(pid)))),
+            ci = sem*1.96, 
+            rt = mean(rt))%>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+#Incorrect responses
+data_all_group_change_incorr <- data_all %>%
+  filter(accuracy == 0) %>%
+  group_by(condition, time) %>%
+  summarise(mean = mean(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_change_smoothed_bc.mm`, na.rm = TRUE),
+            n = length(unique(pid)), # n here is the total pids per condition
+            sem = (sd/sqrt(length(unique(pid)))),
+            ci = sem*1.96, 
+            rt = mean(rt))%>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+```
+
+
+
+##Summary metrics
+
+#Pupil mean
+```{r}
+data_all_pid_mean <- data_all %>% 
+  filter(time >= 0) %>%
+  group_by(pid, condition, accuracy) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%
+  mutate(accuracy = as.factor(accuracy)) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+head(data_all_pid_mean)
+
+data_all_pid_mean_2 <-data_all %>% 
+  filter(time >= 0) %>%
+  group_by(pid, condition) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%  
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+
+
+data_all_pid_mean_corr <- data_all_pid_mean %>%
+  filter(accuracy == 1)
+data_all_pid_mean_incorr <- data_all_pid_mean %>%
+  filter(accuracy == 0)
+
+data_all_group_mean <-  data_all %>% 
+  filter(time >= 0) %>%
+  group_by(condition, accuracy) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%
+  mutate(accuracy = as.factor(accuracy)) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar")) 
+
+data_all_group_mean_2 <-  data_all %>% 
+  filter(time >= 0) %>%
+  group_by(condition) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar")) 
+
+data_all_group_mean_corr <-data_all_group_mean %>%
+  filter(accuracy == 1)
+data_all_group_mean_incorr <-data_all_group_mean %>%
+  filter(accuracy == 0)
+```
+
+#Pupil change 
+```{r}
+pupil_rt_locked <- data_all %>%
+  group_by(pid, trial, condition, accuracy) %>%
+  mutate(
+    # Recompute onset time from target trigger
+    onset_time = 0,
+    rt_time      = rt * 1000,
+    time_to_rt = time - rt_time
+  ) %>%
+  
+  # Keep only the 200ms before the response
+  filter(time_to_rt >= -200 & time_to_rt <= 0) %>%
+  
+  group_by(pid, trial, condition, accuracy) %>%
+  summarise(
+    mean_pupil_change = mean(Pupil_Diameter_change_smoothed_bc.mm, na.rm = TRUE),
+    sd = sd(Pupil_Diameter_change_smoothed_bc.mm),
+    n_samples         = sum(!is.na(Pupil_Diameter_change_smoothed_bc.mm)),
+    .groups = "drop"
+  ) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar")) 
+
+pupil_rt_summary <- pupil_rt_locked %>%
+  group_by(pid, condition, accuracy) %>%
+  summarise(
+    mean_pupil_change = mean(mean_pupil_change, na.rm = TRUE),
+    sd = sd(sd, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+pupil_rt_summary_2 <- pupil_rt_locked %>%
+  group_by(pid, condition) %>%
+  summarise(
+    mean_pupil_change = mean(mean_pupil_change, na.rm = TRUE),
+    sd = sd(sd, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+pupil_rt_summary_corr <- pupil_rt_summary %>%
+  filter(accuracy == 1)
+pupil_rt_summary_incorr <- pupil_rt_summary %>%
+  filter(accuracy == 0)
+
+
+pupil_rt_summary_group <- pupil_rt_locked %>%
+  group_by(condition, accuracy) %>%
+  summarise(
+    mean_pupil_change = mean(mean_pupil_change, na.rm = TRUE),
+    sd = sd(sd, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+pupil_rt_summary_group_2 <-pupil_rt_locked %>%
+  group_by(condition) %>%
+  summarise(
+    mean_pupil_change = mean(mean_pupil_change, na.rm = TRUE),
+    sd = sd(sd, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+pupil_rt_summary_group_corr <- pupil_rt_summary_group %>%
+  filter(accuracy == 1)
+
+pupil_rt_summary_group_incorr <- pupil_rt_summary_group %>%
+  filter(accuracy == 0)
+```
+
+#Pupil max
+```{r}
+library(dplyr)
+
+# Helper function: given a subset of rows, find the peak and 
+# average pupil in a ±50ms window around it
+peak_avg <- function(time_vec, pupil_vec, window_ms = 50) {
+  # Find index of maximum pupil value
+  peak_idx  <- which.max(pupil_vec)
+  peak_time <- time_vec[peak_idx]
+  
+  # Average pupil in ±50ms around the peak
+  in_window <- time_vec >= (peak_time - window_ms) & 
+               time_vec <= (peak_time + window_ms)
+  mean(pupil_vec[in_window], na.rm = TRUE)
+}
+
+pupil_diff <- data_all %>%
+  group_by(pid, trial, condition, accuracy) %>%
+  summarise(
+    # Peak-centred average during BASELINE (fixation_baseline)
+    baseline_peak_avg = peak_avg(
+      time[Stimulus == "fixation_baseline"],
+      Pupil_Diameter_bc.mm[Stimulus == "fixation_baseline"]
+    ),
+    
+    # Peak-centred average during STIMULUS (target)
+    target_peak_avg = peak_avg(
+      time[Stimulus == "target"],
+      Pupil_Diameter_bc.mm[Stimulus == "target"]
+    ),
+    
+    # Difference: target peak - baseline peak
+    pupil_peak_diff = target_peak_avg - baseline_peak_avg,
+    
+    .groups = "drop"
+  )
+
+## By pid
+pupil_diff_pid <- pupil_diff %>%
+  group_by(pid, condition, accuracy) %>%
+  summarise(mean = mean(pupil_peak_diff, na.rm = TRUE), 
+            sd = sd(pupil_peak_diff, na.rm = TRUE)) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+pupil_diff_pid_2 <- pupil_diff %>%
+  group_by(pid, condition) %>%
+  summarise(mean = mean(pupil_peak_diff, na.rm = TRUE), 
+            sd = sd(pupil_peak_diff, na.rm = TRUE)) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+pupil_diff_pid_corr <- pupil_diff_pid %>%
+  filter(accuracy == 1)
+pupil_diff_pid_incorr <- pupil_diff_pid %>%
+  filter(accuracy == 0)
+
+
+pupil_diff_group<- pupil_diff %>%
+  group_by(condition) %>%
+  summarise(mean = mean(pupil_peak_diff, na.rm = TRUE), 
+            sd = sd(pupil_peak_diff, na.rm = TRUE)) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+pupil_diff_group_corr <- pupil_diff %>%
+  filter(accuracy == 1) %>%
+  group_by(condition) %>%
+  summarise(mean = mean(pupil_peak_diff, na.rm = TRUE), 
+            sd = sd(pupil_peak_diff, na.rm = TRUE)) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+
+pupil_diff_group_incorr <- pupil_diff %>%
+  filter(accuracy == 0) %>%
+  group_by(condition) %>%
+  summarise(mean = mean(pupil_peak_diff, na.rm = TRUE), 
+            sd = sd(pupil_peak_diff, na.rm = TRUE)) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+```
+
+# Summary at the trials level
+```{r}
+data_all_pid_mean_trial <- data_all %>% 
+  filter(time >= 0) %>%
+  group_by(pid, trial, condition, accuracy) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96) 
+head(data_all_pid_mean_trial)
+write_csv(data_all_pid_mean_trial, here("data", "pupil_metrics", "mean_pid_trial.csv"))
+```
+Pupil max
+```{r}
+data_all_pid_max_trial <- pupil_diff
+write_csv(data_all_pid_max_trial, here("data", "pupil_metrics", "max_pid_trial.csv"))
+```
+Rate pupil
+```{r}
+data_all_pid_change_trial <- pupil_rt_locked
+write_csv(data_all_pid_change_trial, here("data", "pupil_metrics", "change_pid_trial.csv"))
+```
+
+
+
+
+#Adding rt for plotting
+
+adding rt pid level
+```{r}
+data_pid_rt <- data_all %>%
+  group_by(pid, condition, accuracy) %>% 
+  summarise(rt = mean(rt, na.rm = TRUE)) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+data_all_pid_rt <- data_pid_rt %>%
+  group_by(pid, condition) %>% 
+  summarise(rt = mean(rt, na.rm = TRUE)) 
+
+#Correct responses
+data_all_pid_rt_corr <- data_pid_rt %>%
+  filter(accuracy == 1)
+
+#Incorrect responses
+data_all_pid_rt_incorr <- data_pid_rt %>%
+  filter(accuracy == 0)
+```
+
+adding rt group level
+```{r}
+data_group_rt <- data_all %>%
+  group_by(condition, accuracy) %>% 
+  summarise(rt = mean(rt, na.rm = TRUE)) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+data_all_group_rt <- data_all %>%
+  group_by(condition) %>% 
+  summarise(rt = mean(rt, na.rm = TRUE)) %>%
+  mutate(condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"))
+
+
+#Correct responses
+data_all_group_rt_corr <- data_group_rt %>%
+  filter(accuracy == 1)
+
+#Incorrect responses
+data_all_group_rt_incorr <- data_group_rt %>%
+  filter(accuracy == 0)
+
+```
+
+# section 3 #
+
+
+## make some ribbon plots ##
+
+## at the pid level
+
+
+## Pupil diameter trace ##
+#All responses
+```{r}
+p3.1 <- ggplot(data_all_pid_diam,
+               aes(x = time, y = mean, fill = condition)) +
+  geom_vline(data = data_all_pid_rt, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.2), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_pid_rt, aes(x = rt*1000, label = condition, y = 0.6, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  facet_wrap(~pid, ncol=4) +
+  ylab("Pupil change (mm)") +
+  xlab("Time") +
+  xlim(-100, 2470)
+p3.1
+ggsave("figures/ribbon_all_pid_data_points_background_n18.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+#Correct responses
+```{r}
+p3.1 <- ggplot(data_all_pid_diam_corr,
+               aes(x = time, y = mean, fill = condition)) +
+  geom_vline(data = data_all_pid_rt_corr, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.2), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_pid_rt_corr, aes(x = rt*1000, label = condition, y = 0.6, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  facet_wrap(~pid, ncol=3) +
+  ylab("Pupil change (mm)") +
+  xlab("Time") +
+  xlim(-100, 2470)
+p3.1
+ggsave("figures/ribbon_all_pid_data_points_background_n18_correct.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+#Incorrect responses
+```{r}
+p3.1 <- ggplot(data_all_pid_diam_incorr,
+               aes(x = time, y = mean, fill = condition)) +
+  geom_vline(data = data_all_pid_rt_incorr, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.2), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_pid_rt_incorr, aes(x = rt*1000, label = condition, y = 0.6, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  facet_wrap(~Subject, ncol=3) +
+  ylab("Pupil change (mm)") +
+  xlab("Time") +
+  xlim(-100, 2470)
+p3.1
+ggsave("figures/ribbon_all_pid_data_points_background_n18_incorrect.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+## Rate of pupil change ##
+#All responses
+```{r}
+p3.2 <- ggplot(data_all_pid_change,
+               aes(x = time, y = mean, fill = condition)) +
+  geom_vline(data = data_all_pid_rt, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.00055), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_pid_rt, aes(x = rt*1000, label = condition, y = 0.0006, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  facet_wrap(~pid, ncol=5) +
+  ylab("Rate of Pupil change (mm)") +
+  xlab("Time") +
+  xlim(-100, 2470) +
+  ylim(-0.0010, 0.0007)
+
+p3.2
+ggsave("figures/ribbon_all_pid_change_background_n18.jpeg",
+       width = 18, height = 8, dpi = 800)
+```
+
+#Correct responses
+```{r}
+p3.2 <- ggplot(data_all_pid_change_corr,
+               aes(x = time, y = mean, fill = condition)) +
+  geom_vline(data = data_all_pid_rt_corr, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.00055), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_pid_rt_corr, aes(x = rt*1000, label = condition, y = 0.0006, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  facet_wrap(~pid, ncol=5) +
+  ylab("Rate of Pupil change (mm)") +
+  xlab("Time") +
+  xlim(-100, 2470) +
+  ylim(-0.0010, 0.0007)
+
+p3.2
+ggsave("figures/ribbon_all_pid_change_background_n18_corr.jpeg",
+       width = 18, height = 8, dpi = 800)
+```
+
+#Incorrect responses
+```{r}
+p3.2 <- ggplot(data_all_pid_change_incorr,
+               aes(x = time, y = mean, fill = condition)) +
+  geom_vline(data = data_all_pid_rt_incorr, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.00055), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_pid_rt_incorr, aes(x = rt*1000, label = condition, y = 0.0006, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  facet_wrap(~Subject, ncol=5) +
+  ylab("Rate of Pupil change (mm)") +
+  xlab("Time") +
+  xlim(-100, 2470) +
+  ylim(-0.0010, 0.0007)
+
+p3.2
+ggsave("figures/ribbon_all_pid_change_background_n18_incorr.jpeg",
+       width = 18, height = 8, dpi = 800)
+```
+
+
+## at the group level
+
+## Pupil diameter trace ##
+#All responses
+```{r}
+p3.1 <- ggplot(data_all_group_diam,
+               aes(x = time, y = mean, fill = condition)) +
+  geom_vline(data = data_all_group_rt, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.2), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_group_rt, aes(x = rt*1000, label = condition, y = 0.35, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Pupil change (mm)") +
+  xlab("Time") +
+  xlim(-100, 2440) +
+  ylim(-0.2,0.4)
+p3.1
+ggsave("figures/ribbon_all_group_data_points_background_all.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+#Correct responses
+```{r}
+p3.1 <- ggplot(data_all_group_diam_corr,
+               aes(x = time, y = mean, fill = condition)) +
+  geom_vline(data = data_all_group_rt_corr, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.2), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_group_rt_corr, aes(x = rt*1000, label = condition, y = 0.35, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Pupil change (mm)") +
+  xlab("Time") +
+  xlim(-100, 2440) +
+  ylim(-0.2,0.4)
+p3.1
+ggsave("figures/ribbon_all_group_data_points_background_all_correct.jpeg",
+       width = 10, height = 8, dpi = 800)
+```
+
+#Incorrect responses
+```{r}
+p3.1 <- ggplot(data_all_group_diam_incorr,
+               aes(x = time, y = mean, fill = condition)) +
+  geom_vline(data = data_all_group_rt_incorr, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.2), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_group_rt_incorr, aes(x = rt*1000, label = condition, y = 0.35, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Pupil change (mm)") +
+  xlab("Time") +
+  xlim(-100, 2440) +
+  ylim(-0.2,0.4)
+p3.1
+ggsave("figures/ribbon_all_group_data_points_background_all_incorrect.jpeg",
+       width = 10, height = 8, dpi = 800)
+```
+
+## Rate of pupil change ##
+#All responses
+```{r}
+p3.2 <- ggplot(data_all_group_change,
+               aes(x = time, y = mean*1000, fill = condition)) +
+  geom_vline(data = data_all_group_rt, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=(mean-sem)*1000, ymax=(mean+sem)*1000), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.00055), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_group_rt, aes(x = rt*1000, label = condition, y = 0.0006, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Rate of Pupil change (mm/s)") +
+  xlab("Time") +
+  xlim(-100, 2440) +
+  ylim(-0.0005*1000, 0.0007*1000)
+
+p3.2
+ggsave("figures/ribbon_all_group_change_background_all.jpeg",
+       width = 18, height = 8, dpi = 800)
+```
+
+#Correct responses
+```{r}
+p3.2 <- ggplot(data_all_group_change_corr,
+               aes(x = time, y = mean*1000, fill = condition)) +
+  geom_vline(data = data_all_group_rt_corr, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=(mean-sem)*1000, ymax=(mean+sem)*1000), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.00055), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_group_rt_corr, aes(x = rt*1000, label = condition, y = 0.0006, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Rate of Pupil change (mm/ms)") +
+  xlab("Time") +
+  xlim(-100, 2440) +
+  ylim(-0.0010, 0.0007) +
+  ylim(-0.0005*1000, 0.0007*1000)
+
+p3.2
+ggsave("figures/ribbon_all_group_change_background_all_corr.jpeg",
+       width = 10, height = 8, dpi = 800)
+```
+
+#Incorrect responses
+```{r}
+p3.2 <- ggplot(data_all_group_change_incorr,
+               aes(x = time, y = mean*1000, fill = condition)) +
+  geom_vline(data = data_all_group_rt_incorr, aes(xintercept = rt*1000, color = condition), linetype = "dashed") +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=(mean-sem)*1000, ymax=(mean+sem)*1000), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_text(aes(x = 0, label = "\nstimulus onset",y = 0.00055), colour = "red", angle = 90, text=element_text(size = 11)) +
+  geom_text(data = data_all_group_rt_incorr, aes(x = rt*1000, label = condition, y = 0.0006, color = condition), angle = 90, text=element_text(size = 11)) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Rate of Pupil change (mm)") +
+  xlab("Time") +
+  xlim(-100, 2440) +
+  ylim(-0.0005*1000, 0.0007*1000)
+
+p3.2
+ggsave("figures/ribbon_all_pid_change_background_all_incorr.jpeg",
+       width = 18, height = 8, dpi = 800)
+```
+
+
+#Plotting by accurracy
+Pupil change group
+```{r}
+p3.4 <- ggplot(data_all_group_diam_acc,
+               aes(x = time, y = mean, fill = accuracy)) +
+  geom_line(aes(colour = accuracy), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  scale_colour_manual(values = myColors_accuracy, labels = c("Incorrect", "Correct"))+
+  scale_fill_manual(values = myColors_accuracy, labels = c("Incorrect", "Correct")) +  
+  facet_wrap(~condition) +
+  ylab("Pupil change (mm)") +
+  xlab("Time") +
+  xlim(-100, 2440) +
+  labs(colour = "Response accuracy", fill = "Response accuracy")
+p3.4
+ggsave("figures/ribbon_all_group_diam_incorrect_correct_all.jpeg",
+       width = 10, height = 8, dpi = 800)
+```
+Rate of pupil change group
+```{r}
+p3.4 <- ggplot(data_all_group_change_acc,
+               aes(x = time, y = mean*1000, fill = accuracy)) +
+  geom_line(aes(colour = accuracy), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=(mean-sem)*1000, ymax=(mean+sem)*1000), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  scale_colour_manual(values = myColors_accuracy, labels = c("Incorrect", "Correct"))+
+  scale_fill_manual(values = myColors_accuracy, labels = c("Incorrect", "Correct")) +  
+  facet_wrap(~condition) +
+  ylab("Rate of pupil change (mm/s)") +
+  xlab("Time") +
+  xlim(-100, 2440) +
+  ylim(-0.0005*1000, 0.0007*1000)
+  labs(colour = "Response accuracy", fill = "Response accuracy")
+p3.4
+ggsave("figures/ribbon_all_group_change_incorrect_correct_all.jpeg",
+       width = 10, height = 8, dpi = 800)
+```
+
+Pupil change pid
+```{r}
+p3.4 <- ggplot(data_all_pid_diam_acc,
+               aes(x = time, y = mean*1000, fill = accuracy)) +
+  geom_line(aes(colour = accuracy), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=(mean-sem)*1000, ymax=(mean+sem)*1000), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  scale_colour_manual(values = myColors_accuracy, labels = c("Incorrect", "Correct"))+
+  scale_fill_manual(values = myColors_accuracy, labels = c("Incorrect", "Correct")) +  
+  facet_grid(pid~condition) +
+  ylab("Pupil change (mm/s)") +
+  xlab("Time") +
+  ylim(-0.2*1000, 0.6*1000)+
+  xlim(0, 2440) +
+  labs(colour = "Response accuracy", fill = "Response accuracy")
+p3.4
+ggsave("figures/ribbon_all_pid_diam_incorrect_correct_all.jpeg",
+       width = 10, height = 8, dpi = 800)
+```
+Rate of pupil change pid
+```{r}
+p3.4 <- ggplot(data_all_pid_change_acc,
+               aes(x = time, y = mean, fill = accuracy)) +
+  geom_line(aes(colour = accuracy), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  scale_colour_manual(values = myColors_accuracy, labels = c("Incorrect", "Correct"))+
+  scale_fill_manual(values = myColors_accuracy, labels = c("Incorrect", "Correct")) +  
+  facet_grid(Subject~condition) +
+  ylab("Rate of pupil change (mm)") +
+  xlab("Time") +
+  xlim(0, 2400) +
+  labs(colour = "Response accuracy", fill = "Response accuracy")
+p3.4
+ggsave("figures/ribbon_all_pid_change_incorrect_correct_all.jpeg",
+       width = 10, height = 8, dpi = 800)
+```
+
+
+## Maximum pupil dilation ##
+
+Group level
+```{r}
+p3.1 <- ggplot(pupil_diff_group,
+               aes(x = condition, y = mean, fill = condition)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd),width = 0.2) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Maximum pupil dilation (mm)") +
+  xlab("Condition") +
+  theme(legend.position = "none")
+
+p3.1
+ggsave("figures/barplot_max_diff_all_group_all.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+By accuracy
+Corr
+```{r}
+p3.1 <- ggplot(pupil_diff_group_corr,
+               aes(x = condition, y = mean, fill = condition)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd),width = 0.2) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Maximum pupil dilation (mm)") +
+  xlab("Condition") +
+  theme(legend.position = "none")
+
+p3.1
+ggsave("figures/barplot_max_diff_all_group_all_corr.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+Incorr
+```{r}
+p3.1 <- ggplot(pupil_diff_group_incorr,
+               aes(x = condition, y = mean, fill = condition)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd),width = 0.2) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Maximum pupil dilation (mm)") +
+  xlab("Condition") +
+  theme(legend.position = "none")
+
+p3.1
+ggsave("figures/barplot_max_diff_all_group_all_incorr.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+## Mean pupil size ##
+
+Group level
+```{r}
+p3.1 <- ggplot(data_all_group_mean_2,
+               aes(x = condition, y = mean, fill = condition)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd),width = 0.2) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Mean pupil size (mm)") +
+  xlab("Condition") +
+  theme(legend.position = "none")
+
+p3.1
+ggsave("figures/barplot_mean_all_group_all.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+By accuracy
+Corr
+```{r}
+p3.1 <- ggplot(data_all_group_mean_corr,
+               aes(x = condition, y = mean, fill = condition)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd),width = 0.2) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Mean pupil size (mm)") +
+  xlab("Condition") +
+  theme(legend.position = "none")
+
+p3.1
+ggsave("figures/barplot_mean_all_group_all_corr.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+Incorr
+```{r}
+p3.1 <- ggplot(data_all_group_mean_incorr,
+               aes(x = condition, y = mean, fill = condition)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean-sd, ymax = mean+sd),width = 0.2) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  ylab("Mean pupil size (mm)") +
+  xlab("Condition") +
+  theme(legend.position = "none")
+
+p3.1
+ggsave("figures/barplot_mean_all_pid_all_incorr.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+#Rate of pupil change#
+
+facet by pid
+```{r}
+p3.1 <- ggplot(pupil_rt_summary_2,
+               aes(x = condition, y = mean_pupil_change, fill = condition)) +
+  geom_col() +
+  scale_colour_brewer(values = myColors) +
+  geom_errorbar(aes(ymin = mean_pupil_change-sd, ymax = mean_pupil_change+sd),width = 0.2) +
+  scale_fill_brewer(values = myColors) +
+  facet_wrap(~Subject, ncol=5) +
+  scale_y_continuous(name = "Rate of pupil change (mm)", labels = scales::comma) +
+  xlab("Condition") +
+  theme(legend.position = "none")
+
+p3.1
+ggsave("figures/barplot_rate_all_pid_all.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+By accuracy
+
+Group level
+```{r}
+p3.1 <- ggplot(pupil_rt_summary_group_2,
+               aes(x = condition, y = mean_pupil_change*1000, fill = condition)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = (mean_pupil_change-sd)*1000, ymax = (mean_pupil_change+sd)*1000),width = 0.2) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  scale_y_continuous(name = "Rate of pupil change (mm/s)", labels = scales::comma) +
+  xlab("Condition") +
+  theme(legend.position = "none")
+
+p3.1
+ggsave("figures/barplot_rate_all_group_all.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+By accuracy
+Corr
+```{r}
+p3.1 <- ggplot(pupil_rt_summary_group_corr,
+               aes(x = condition, y = mean_pupil_change*1000, fill = condition)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = (mean_pupil_change-sd)*1000, ymax = (mean_pupil_change+sd)*1000),width = 0.2) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  scale_y_continuous(name = "Rate of pupil change (mm/s)", labels = scales::comma) +
+  xlab("Condition") +
+  theme(legend.position = "none")
+
+p3.1
+ggsave("figures/barplot_rate_all_group_all_corr.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+Incorr
+```{r}
+p3.1 <- ggplot(pupil_rt_summary_group_incorr,
+               aes(x = condition, y = mean_pupil_change*1000, fill = condition)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = (mean_pupil_change-sd)*1000, ymax = (mean_pupil_change+sd)*1000),width = 0.2) +
+  scale_colour_manual(values = myColors) +
+  scale_fill_manual(values = myColors) +
+  scale_y_continuous(name = "Rate of pupil change (mm/s)", labels = scales::comma) +
+  xlab("Condition") +
+  theme(legend.position = "none")
+
+p3.1
+ggsave("figures/barplot_rate_all_pid_all_incorr.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+
+## save out some data files ##
+
+```{r}
+## summary data
+write_csv(data_all_pid_diam, "data/data_pid.csv")
+write_csv(data_all_pid_change, "data/data_pid_change.csv")
+write_csv(data_all_group_diam, "data/data_all_group_pilot.csv")
+write_csv(data_all_group_change, "data/data_all_group_change.csv")
+
+#Pupil metrics
+write_csv(pupil_rt_summary, "data/rate_pid.csv")
+write_csv(pupil_diff_pid, "data/max_pid.csv")
+write_csv(data_all_pid_mean, "data/mean_pid.csv")
+```
+
+
+
+
+##Plotting some tests
+Rate
+```{r}
+library(tidyverse)
+library(rstatix)
+library(ggpubr)
+
+# Make sure factors are factors
+df <- rate_pid %>%
+  mutate(
+    pid = as.factor(pid),
+    condition = as.factor(condition),
+    accuracy = as.factor(accuracy)
+  )
+
+# Aggregate to one mean per pid x condition x accuracy
+df_agg <- df %>%
+  group_by(pid, condition, accuracy) %>%
+  summarise(mean_pupil_change = mean(mean_pupil_change, na.rm = TRUE), .groups = "drop")
+
+df_agg %>%
+  count(pid, condition, accuracy) %>%
+  pivot_wider(names_from = c(condition, accuracy), values_from = n) %>%
+  print(n = Inf)
+
+res_aov <- anova_test(
+  data = df_agg,
+  dv = mean_pupil_change,
+  wid = pid,
+  within = c(condition, accuracy)
+)
+get_anova_table(res_aov)
+
+df_agg %>%
+  pairwise_t_test(
+    mean_pupil_change ~ condition, paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+
+# Or for the interaction, split by accuracy:
+df_agg %>%
+  group_by(accuracy) %>%
+  pairwise_t_test(
+    mean_pupil_change ~ condition, paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+
+# Summary stats with within-subject (Morey-corrected) CIs
+summary_stats <- df_agg %>%
+  group_by(condition, accuracy) %>%
+  summarise(
+    n = n(),
+    mean = mean(mean_pupil_change, na.rm = TRUE),
+    sd = sd(mean_pupil_change, na.rm = TRUE),
+    se = sd / sqrt(n),
+    .groups = "drop"
+  )
+
+print(summary_stats)
+
+
+# Create a combined cell factor for pairwise testing
+df_agg <- df_agg %>%
+  mutate(cell = interaction(condition, accuracy, sep = "_"))
+
+# Pairwise paired t-tests across all 6 cell comparisons, with correction
+pwc <- df_agg %>%
+  pairwise_t_test(
+    mean_pupil_change ~ cell,
+    paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+
+pwc
+
+# x positions for each cell, matching position_dodge(0.2) with 2 groups
+# (Learned = 1, Novel = 2 on the discrete axis; ±0.05 is the dodge offset)
+cell_x <- tibble(
+  cell = c("Learned_0", "Learned_1", "Novel_0", "Novel_1"),
+  x    = c(0.95, 1.05, 1.95, 2.05)
+)
+
+pwc <- pwc %>%
+  left_join(cell_x, by = c("group1" = "cell")) %>%
+  rename(xmin = x) %>%
+  left_join(cell_x, by = c("group2" = "cell")) %>%
+  rename(xmax = x)
+
+# Stagger y.position so brackets don't overlap each other
+pwc <- pwc %>%
+  arrange(xmin, xmax) %>%
+  mutate(y.position = max(df_agg$mean_pupil_change, na.rm = TRUE) + row_number() * 0.00005)
+
+
+ggplot(summary_stats, aes(x = condition, y = mean, color = accuracy, group = accuracy)) +
+  geom_line(position = position_dodge(0.2), linewidth = 1) +
+  geom_point(position = position_dodge(0.2), size = 3) +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.1, position = position_dodge(0.2)) +
+  geom_jitter(data = df_agg, aes(x = condition, y = mean_pupil_change, color = accuracy),
+              alpha = 0.15, position = position_jitterdodge(dodge.width = 0.2, jitter.width = 0.1)) +
+  stat_pvalue_manual(
+    pwc, label = "p.adj.signif", hide.ns = TRUE,
+    tip.length = 0.01
+  ) +
+  labs(x = "Condition", y = "Mean pupil change",
+       color = "Accuracy", title = "Mean pupil change by condition and accuracy") +
+  theme_minimal(base_size = 13)
+
+
+ggsave("figures/rate_acc_cond.jpeg", width = 18, height = 10, dpi = 800)
+
+
+```
+
+Mean
+```{r}
+# Make sure factors are factors
+df <- mean_pid %>%
+  mutate(
+    pid = as.factor(pid),
+    condition = as.factor(condition),
+    accuracy = as.factor(accuracy)
+  )
+
+# Aggregate to one mean per pid x condition x accuracy
+df_agg <- df %>%
+  group_by(pid, condition, accuracy) %>%
+  summarise(mean = mean(mean, na.rm = TRUE), .groups = "drop")
+
+df_agg %>%
+  count(pid, condition, accuracy) %>%
+  pivot_wider(names_from = c(condition, accuracy), values_from = n) %>%
+  print(n = Inf)
+
+res_aov <- anova_test(
+  data = df_agg,
+  dv = mean,
+  wid = pid,
+  within = c(condition, accuracy)
+)
+get_anova_table(res_aov)
+
+df_agg %>%
+  pairwise_t_test(
+    mean ~ condition, paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+
+# Or for the interaction, split by accuracy:
+df_agg %>%
+  group_by(accuracy) %>%
+  pairwise_t_test(
+    mean ~ condition, paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+
+# Summary stats with within-subject (Morey-corrected) CIs
+summary_stats <- df_agg %>%
+  group_by(condition, accuracy) %>%
+  summarise(
+    n = n(),
+    mean = mean(mean, na.rm = TRUE),
+    sd = sd(mean, na.rm = TRUE),
+    se = sd / sqrt(n),
+    .groups = "drop"
+  )
+
+print(summary_stats)
+
+
+# Create a combined cell factor for pairwise testing
+df_agg <- df_agg %>%
+  mutate(cell = interaction(condition, accuracy, sep = "_"))
+
+# Pairwise paired t-tests across all 6 cell comparisons, with correction
+pwc <- df_agg %>%
+  pairwise_t_test(
+    mean ~ cell,
+    paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+
+pwc
+
+# x positions for each cell, matching position_dodge(0.2) with 2 groups
+# (Learned = 1, Novel = 2 on the discrete axis; ±0.05 is the dodge offset)
+cell_x <- tibble(
+  cell = c("Learned_0", "Learned_1", "Novel_0", "Novel_1"),
+  x    = c(0.95, 1.05, 1.95, 2.05)
+)
+
+pwc <- pwc %>%
+  left_join(cell_x, by = c("group1" = "cell")) %>%
+  rename(xmin = x) %>%
+  left_join(cell_x, by = c("group2" = "cell")) %>%
+  rename(xmax = x)
+
+# Stagger y.position so brackets don't overlap each other
+pwc <- pwc %>%
+  arrange(xmin, xmax) %>%
+  mutate(y.position = max(df_agg$mean, na.rm = TRUE) + row_number() * 0.00005)
+
+
+ggplot(summary_stats, aes(x = condition, y = mean, color = accuracy, group = accuracy)) +
+  geom_line(position = position_dodge(0.2), linewidth = 1) +
+  geom_point(position = position_dodge(0.2), size = 3) +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.1, position = position_dodge(0.2)) +
+  geom_jitter(data = df_agg, aes(x = condition, y = mean, color = accuracy),
+              alpha = 0.15, position = position_jitterdodge(dodge.width = 0.2, jitter.width = 0.1)) +
+  stat_pvalue_manual(
+    pwc, label = "p.adj.signif", hide.ns = TRUE,
+    tip.length = 0.01
+  ) +
+  labs(x = "Condition", y = "Mean pupil size",
+       color = "Accuracy", title = "Mean pupil size by condition and accuracy") +
+  theme_minimal(base_size = 13)
+
+
+ggsave("figures/mean_acc_cond.jpeg", width = 18, height = 10, dpi = 800)
+```
+
+Max
+
+```{r}
+# Make sure factors are factors
+df <- max_pid %>%
+  mutate(
+    pid = as.factor(pid),
+    condition = as.factor(condition),
+    accuracy = as.factor(accuracy)
+  )
+
+# Aggregate to one mean per pid x condition x accuracy
+df_agg <- df %>%
+  group_by(pid, condition, accuracy) %>%
+  summarise(mean = mean(mean, na.rm = TRUE), .groups = "drop")
+
+df_agg %>%
+  count(pid, condition, accuracy) %>%
+  pivot_wider(names_from = c(condition, accuracy), values_from = n) %>%
+  print(n = Inf)
+
+res_aov <- anova_test(
+  data = df_agg,
+  dv = mean,
+  wid = pid,
+  within = c(condition, accuracy)
+)
+get_anova_table(res_aov)
+
+df_agg %>%
+  pairwise_t_test(
+    mean ~ condition, paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+
+# Or for the interaction, split by accuracy:
+df_agg %>%
+  group_by(accuracy) %>%
+  pairwise_t_test(
+    mean ~ condition, paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+
+# Summary stats with within-subject (Morey-corrected) CIs
+summary_stats <- df_agg %>%
+  group_by(condition, accuracy) %>%
+  summarise(
+    n = n(),
+    mean = mean(mean, na.rm = TRUE),
+    sd = sd(mean, na.rm = TRUE),
+    se = sd / sqrt(n),
+    .groups = "drop"
+  )
+
+print(summary_stats)
+
+
+# Create a combined cell factor for pairwise testing
+df_agg <- df_agg %>%
+  mutate(cell = interaction(condition, accuracy, sep = "_"))
+
+# Pairwise paired t-tests across all 6 cell comparisons, with correction
+pwc <- df_agg %>%
+  pairwise_t_test(
+    mean ~ cell,
+    paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+
+pwc
+
+# x positions for each cell, matching position_dodge(0.2) with 2 groups
+# (Learned = 1, Novel = 2 on the discrete axis; ±0.05 is the dodge offset)
+cell_x <- tibble(
+  cell = c("Learned_0", "Learned_1", "Novel_0", "Novel_1"),
+  x    = c(0.95, 1.05, 1.95, 2.05)
+)
+
+pwc <- pwc %>%
+  left_join(cell_x, by = c("group1" = "cell")) %>%
+  rename(xmin = x) %>%
+  left_join(cell_x, by = c("group2" = "cell")) %>%
+  rename(xmax = x)
+
+# Stagger y.position so brackets don't overlap each other
+pwc <- pwc %>%
+  arrange(xmin, xmax) %>%
+  mutate(y.position = max(df_agg$mean, na.rm = TRUE) + row_number() * 0.00005)
+
+
+ggplot(summary_stats, aes(x = condition, y = mean, color = accuracy, group = accuracy)) +
+  geom_line(position = position_dodge(0.2), linewidth = 1) +
+  geom_point(position = position_dodge(0.2), size = 3) +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                width = 0.1, position = position_dodge(0.2)) +
+  geom_jitter(data = df_agg, aes(x = condition, y = mean, color = accuracy),
+              alpha = 0.15, position = position_jitterdodge(dodge.width = 0.2, jitter.width = 0.1)) +
+  stat_pvalue_manual(
+    pwc, label = "p.adj.signif", hide.ns = TRUE,
+    tip.length = 0.01
+  ) +
+  labs(x = "Condition", y = "Maximum pupil size",
+       color = "Accuracy", title = "Maximum pupil size by condition and accuracy") +
+  theme_minimal(base_size = 13)
+
+
+ggsave("figures/max_acc_cond.jpeg", width = 18, height = 10, dpi = 800)
+```
+
+

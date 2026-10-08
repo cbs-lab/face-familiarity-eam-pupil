@@ -1,0 +1,1412 @@
+---
+title: "main_effects"
+author: "Fournier Raphaël"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## load packages ##
+```{r load-pkg}
+
+
+#install.packages("remotes")
+#remotes::install_github("stan-dev/cmdstanr")
+# 
+#install.packages("devtools")
+#devtools::install_github("jmgirard/standist")
+# 
+#install.packages(c("EMC2", "tidyverse", "RColorBrewer", "patchwork", "tidybayes", "DataExplorer","ggpubr", "paletteer","corrplot", "brms", "bayesplot", "future", "mgcv", "rstan","marginaleffects", "here"))
+
+pkxg <- c("EMC2", "tidyverse", "RColorBrewer", "patchwork", "tidybayes", "DataExplorer","ggpubr", "paletteer","corrplot", "brms", "bayesplot", "future", "mgcv", "rstan","marginaleffects", "here")
+
+lapply(pkxg, library, character.only = TRUE)
+```
+
+
+## plot settings ##
+#Colors
+```{r}
+myColors <- c("Novel" = paletteer_d("rcartocolor::Safe",4)[1],"Learned" =  paletteer_d("rcartocolor::Safe",4)[2])
+```
+
+
+theme settings for ggplot
+
+```{r, eval = F}
+theme_set(
+  theme_bw() +
+    theme(text = element_text(size = 18, face="bold"), 
+          title = element_text(size = 18, face="bold"),
+          legend.position = "bottom")
+)
+
+## Set the amount of dodge in figures
+pd <- position_dodge(0.7)
+pd2 <- position_dodge(1)
+```
+
+
+#Load data if needed
+```{r}
+derived_samples_wide_pupil <- read_csv(here("data", "derived_samples_wide_pupil.csv"))
+
+
+#Save the correlations draws
+correlation_draws_max <- read_csv(here("data", "correlation_draws_max.csv"))
+correlation_draws_mean <- read_csv(here("data", "correlation_draws_mean.csv"))
+correlation_draws_rate <- read_csv(here("data", "correlation_draws_rate.csv"))
+```
+
+
+#Load models
+```{r}
+load("models/LBA_WP3.RData")
+```
+
+
+#Preregistered Model
+
+#Parameters per subjects
+```{r}
+#Preregistered model
+param_1_pid = EMC2::parameters(LBA_WP3,selection="alpha",N = NULL)
+#Remember:number of iters = 5000 / number of chains = 3 -> 5'000 x 35(subjects) x 3(number of chains) = 525000 obs for each parameter
+write_csv(param_1_pid, "data/param_pid.csv")
+```
+
+
+###Preregistered model
+
+# section 2 #
+
+## what about visualising parameters from the model? ##
+
+As well as the posterior predictions, we also want to plot and summarise the estimated parameters from the posterior distribution. e.g., drift rate, response caution etc. So let's take a look at that.
+
+Note to Raph/reminder for Rich: One thing that took a little (or rather a lot of) figuring out was how the DMC compare.p convenience function calculates group average parameter estimates for the posterior distribution. It takes all pid posteriors, averages them first and then calculates the relevant quantiles to display and make inferences from. In other words, it first summarises parameters over pid 1, 2, 3, etc. and then calculates quantiles. This matters, because you could also calculate the quantiles without first averaging. So, the below has been tested to produce the same outputs as the compare.p function, which is re-assuring.
+
+But instead of using compare.p, we take the posterior distributions from the samples object and then summarise and plot the results ourselves.
+
+## wrangle all parameters and take a quick look ##
+
+This is just to get a quick overview of all 9 parameters (before we perform any contrasts/comparisons between conditions).
+
+## wrangle the samples first into a tidy format ##
+
+transpose samples and pluck theta out into a list of arrays
+
+## create a group summary distribution ##
+
+summarise across pid (to be consistent with the DMC compare.p function)
+
+##Wrangle
+Pid level
+```{r}
+split_tibble <- function(tibble, col = 'col') tibble %>% split(., .[, col])
+array_theta_1 <- split_tibble(param_1_pid, "subjects")
+array_theta_1<-do.call(rbind, array_theta_1)
+array_theta_pid_1 <- array_theta_1 %>%
+  pivot_longer(cols = c("v_SNovel:lMTRUE", "v_SNovel:lMFALSE", "v_SLearned:lMFALSE", "v_SLearned:lMTRUE", "sv_lMTRUE", "B_lRNovel", "B_lRLearned", "A", "t0"), names_to = "param", values_to = "value")%>%
+  add_column(datapoint = rep(1:15000,each=9,times=31))%>% #here 30'000 = number of chains (3) x number of iteration (10'000)
+  rename(pid=subjects)
+```
+
+Average across participants
+```{r}
+theta_group_1 <- array_theta_pid_1 %>%
+  group_by(datapoint,param) %>% 
+  summarise(value = mean(value, na.rm = T)) %>% 
+  ungroup() %>% 
+  add_column(pid = "average") %>% ## add a column which makes clear it is the avg. not needed but useful for plotting later
+  relocate(pid, .before = everything())
+head(theta_group_1)
+glimpse(theta_group_1)
+```
+
+## calculate quantiles ##
+
+calculate quantiles per parameter at the group level
+
+```{r}
+library(tidybayes)
+theta_group_1_q <- theta_group_1 %>%
+  group_by(param) %>% 
+  median_qi(value)
+theta_group_1_q
+
+write_csv(theta_group_1, "data/theta_group.csv")
+write_csv(theta_group_1_q, "data/theta_group_q.csv")
+```
+
+and do the same per pid
+
+```{r}
+theta_pid_1_q <- array_theta_pid_1 %>%
+  group_by(pid, param) %>% 
+  median_qi(value)
+theta_pid_1_q
+
+write_csv(array_theta_pid_1, "data/theta_pid.csv")
+write_csv(theta_pid_1_q, "data/theta_pid_q.csv")
+```
+
+## some quick and dirty plots with all of the parameters ##
+
+plot the distribution per parameter using a tidybayes halfeye plot
+
+```{r}
+p2.1 <- ggplot(theta_group_1, aes(x = value, y = fct_rev(param))) +  
+  stat_halfeye(alpha = 0.9) +
+  labs(x = "parameter estimate", y = "") 
+p2.1
+
+ggsave("figures/all_params_1.jpeg",
+       width = 8, height = 6)
+```
+
+plot avg and individual pid parameters
+
+```{r}
+p2.2 <- ggplot(theta_group_1, aes(x = value, y = fct_rev(param))) +  
+  stat_halfeye(alpha = 0.9, position = position_nudge(y=-0.5)) +
+  geom_pointinterval(data = theta_pid_1_q, aes(xmin=.lower, xmax=.upper, 
+                                           colour = pid, fill = pid),
+                     position = position_dodge(width = 0.7)) +
+  labs(x = "parameter estimate", y = "") +
+  facet_wrap(~param, scales = "free_y") +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+p2.2
+
+ggsave("figures/all_params_pid_1.jpeg",
+       width = 8, height = 6)
+```
+
+# section 3 #
+
+## plot thresholds separately ##
+
+first, wrangle to make a separate dfs
+
+thresholds df per pid
+
+```{r}
+thresh_pid_1 <- array_theta_pid_1 %>% 
+  filter(str_detect(param, "B_")) %>% 
+  mutate(response = if_else(str_detect(param, "lRLearned"), "Learned", "Novel"),
+         response = factor(response,
+                            levels = c("Novel", "Learned")))
+head(thresh_pid_1)
+str(thresh_pid_1)
+summary(thresh_pid_1)
+
+## data check
+thresh_pid_1 %>% 
+  distinct(param, response)
+```
+
+thresholds at the group level
+
+```{r}
+thresh_group_1 <- theta_group_1 %>% 
+  filter(str_detect(param, "B_")) %>% 
+  mutate(response = if_else(str_detect(param, "lRLearned"), "Learned", "Novel"),
+         response = factor(response,
+                            levels = c("Novel", "Learned")))
+
+head(thresh_group_1)
+str(thresh_group_1)
+summary(thresh_group_1)
+```
+
+## plot ##
+
+
+at the group level
+
+```{r}
+p3.1 <- ggplot(thresh_group_1, aes(x = value, y = fct_rev(response))) +
+  stat_halfeye(alpha = 0.7, aes(fill = response)) +
+  scale_fill_manual(values = myColors) +
+  labs(y="Response", x="Threshold", title=bquote("Group level: 
+Threshold by response")) +
+   theme(legend.position = "none")
+  
+p3.1
+
+## save a figure
+ ggsave("figures/thresh.jpeg",width = 10, height = 6)
+```
+
+## caluclate a threshold response key difference ##
+
+per pid
+
+```{r}
+thresh_diff_pid_1 <- thresh_pid_1 %>%
+  pivot_wider(id_cols = -param,
+              names_from = "response",
+              values_from = "value") %>% 
+  mutate(diff = Novel - Learned)
+head(thresh_diff_pid_1)
+```
+
+at the group level
+
+```{r}
+thresh_diff_1 <- thresh_group_1 %>%
+  pivot_wider(id_cols = -param,
+              names_from = "response",
+              values_from = "value") %>% 
+  mutate(diff = Novel - Learned)
+head(thresh_diff_1)
+```
+
+## quantiles on the difference score ##
+
+per pid
+
+```{r}
+thresh_diff_pid_1_q <- thresh_diff_pid_1 %>%
+  group_by(pid) %>% 
+  median_qi(diff)
+thresh_diff_pid_1_q
+```
+
+at the group level
+
+```{r}
+thresh_diff_1_q <- thresh_diff_1 %>%
+  group_by(pid) %>%
+  median_qi(diff)
+thresh_diff_1_q
+```
+
+## plot the threshold difference score ##
+
+plot the average difference
+
+```{r}
+p3.2 <- ggplot(thresh_diff_1, aes(x = diff, y = "")) +  
+  stat_halfeye(alpha = 0.9, fill="firebrick") +
+  geom_vline(xintercept = 0, color = "darkgrey") +
+  labs(title = "Group level: 
+Threshold (Novel > Learned)", 
+       x = "Threshold", y="") 
+p3.2
+```
+
+plot individual pids
+
+```{r}
+thresh_diff_pid_1$pid = with(thresh_diff_pid_1, reorder(pid, diff, mean))
+p3.3 <- ggplot(thresh_diff_pid_1, aes(x = diff, y = pid,
+                                    fill=pid)) +  
+  stat_halfeye(alpha = 0.7) +
+  geom_vline(xintercept = 0, color = "darkgrey") +
+  labs(title = "Participant level: Threshold (Novel > Learned)", 
+       x = "Threshold", y="participant") 
+p3.3
+```
+
+plot the average difference and individual pids
+
+```{r}
+p3.4 <- ggplot(thresh_diff_1, aes(x = diff, y= reorder(pid, diff, mean))) +  
+  stat_halfeye(data = thresh_diff_pid_1,
+               alpha = 0.7) +
+  geom_vline(xintercept = 0, color = "darkgrey") +
+  labs(title = "Individual and average
+threshold differences", 
+       x = "Threshold", y="participant ID") +
+  stat_halfeye(alpha = 0.9, fill="firebrick",
+               position = position_nudge(y=0)) 
+p3.4
+```
+
+## plot together ##
+
+```{r}
+p3.5 <- p3.1 / p3.2 | p3.3 +
+  labs(caption = "80% and 95% quantile intervals shown in black")
+p3.5
+
+# save a figure
+ ggsave("figures/thresh_1.jpeg",
+        width = 21, height = 10)
+```
+
+and now combine avg and pid difference plots
+
+```{r}
+p3.6 <- p3.1 | p3.2 +
+  labs(caption = "80% and 95% credible intervals shown in black")
+p3.6
+
+# save a figure
+ggsave("figures/thresh_2.jpeg",
+       width = 15, height = 10)
+```
+
+```{r}
+p3.6 <- p3.1 | p3.4 +
+  labs(caption = "80% and 95% quantile intervals shown in black")
+p3.6
+
+# save a figure
+ggsave("figures/thresh_3.jpeg",
+       width = 21, height = 10)
+```
+
+
+the exact layout, labels of factors and arrangement may need polishing and re-arranging.
+
+But for now, the data seem to be what we want.
+
+# section 4 #
+
+## plot drift rate separately ##
+
+## wrangle ##
+
+create a drift-rate df
+
+```{r}
+drift_rate_pid_1 <- array_theta_pid_1 %>% 
+  filter(str_detect(param, "v_S")) %>% 
+  mutate(condition = if_else(str_detect(param, "Novel"), "Novel", "Learned"),
+         accuracy = if_else(str_detect(param, "TRUE"), "True", "False"),
+         condition = factor(condition,
+                            levels = c("Novel", "Learned")),
+         accuracy = factor(accuracy,
+                            levels = c("False", "True")))
+head(drift_rate_pid_1)
+str(drift_rate_pid_1)
+summary(drift_rate_pid_1)
+
+## data check
+drift_rate_pid_1 %>% 
+  distinct(param, condition, accuracy)
+```
+
+
+drift rate at the group level
+
+```{r}
+drift_rate_group_1 <- theta_group_1 %>% 
+  filter(str_detect(param, "v_S")) %>% 
+  mutate(condition = if_else(str_detect(param, "Novel"), "Novel", "Learned"),
+         accuracy = if_else(str_detect(param, "TRUE"), "True", "False"),
+         condition = factor(condition,
+                            levels = c("Novel", "Learned")),
+         accuracy = factor(accuracy,
+                            levels = c("False", "True")))
+head(drift_rate_group_1)
+str(drift_rate_group_1)
+summary(drift_rate_group_1)
+```
+
+## plot ##
+
+#Create a custom manual colour scale: drift_rate group
+
+```{r}
+library(RColorBrewer)
+myColors_drift <- RColorBrewer::brewer.pal(12, "Dark2")[4:5]
+names(myColors_drift) <- levels(drift_rate_group_1$accuracy)
+colScale_drift <- scale_fill_manual(name = "Accuracy", values = myColors_drift)
+```
+
+the average
+
+```{r}
+p4.1 <- ggplot(drift_rate_group_1, aes(x = value, y = fct_rev(condition), 
+                               fill = accuracy)) +
+  stat_halfeye(alpha = 0.7) +
+  colScale_drift +
+  labs(title = "Group level: True and False 
+drift rate by familiarity condition", y="Familiarity", x="Drift rate") 
+p4.1
+
+ggsave("figures/drift_rate_1.jpeg",
+        width = 10, height = 6)
+```
+
+
+
+and now facet by pid
+
+```{r}
+p4.2 <- ggplot(drift_rate_pid_1, aes(x = value, y = fct_rev(condition), 
+                               fill = accuracy)) +
+  stat_halfeye(alpha = 0.7) +
+  colScale_drift +
+  labs(title = "Participant level: Drift-rate by condition",
+       y="Familiarity", x="Drift rate") +
+  facet_wrap(~pid)
+p4.2
+```
+
+take a look together
+
+```{r}
+p4.1 / p4.2
+ggsave("figures/drift_rate_true_false_1.jpeg", 
+       width = 16, height = 13)
+```
+
+## calculate drift rate differences between conditions and accuracy ##
+
+per pid
+
+```{r}
+## just true > false differences (accuracy)
+drift_acc_diff_pid_1 <- drift_rate_pid_1 %>%
+  pivot_wider(id_cols = -param,
+               names_from = accuracy,
+               values_from = value) %>%
+  mutate(diff = True - False)
+drift_acc_diff_pid_1
+
+## unf > fam differences
+drift_acc_cond_diff_pid_1 <- drift_acc_diff_pid_1 %>%
+  pivot_wider(id_cols = -c("True", "False"), 
+              names_from = condition,
+              values_from = diff) %>%
+  mutate(diff = Novel - Learned)
+drift_acc_cond_diff_pid_1
+```
+
+at the group level
+
+```{r}
+## just true > false differences (accuracy)
+drift_acc_diff_1 <- drift_rate_group_1 %>%
+  pivot_wider(id_cols = -param,
+               names_from = accuracy,
+               values_from = value) %>%
+  mutate(diff = True - False)
+drift_acc_diff_1
+
+## unf > fam differences
+drift_acc_cond_diff_1 <- drift_acc_diff_1 %>%
+  pivot_wider(id_cols = -c("True", "False"), 
+              names_from = condition,
+              values_from = diff) %>%
+  mutate(diff = Novel - Learned)
+drift_acc_cond_diff_1
+```
+
+## plot the differences ##
+
+differences between true and false, separately for unf and fam
+
+at the group average level
+
+
+plot
+
+```{r}
+p4.3 <- ggplot(drift_acc_diff_1, aes(x = diff, y = fct_rev(condition))) +
+  stat_halfeye(aes(fill = condition, alpha = 0.7)) +
+  scale_fill_manual(values = myColors) +
+  geom_vline(xintercept = 0, color = "darkgrey") +
+  labs(title = "Group level: Drift rate (True > false)
+by familiarity condition",
+       x="Drift rate", y="Familiarity") +
+  xlim(0,2.5) +
+   theme(legend.position = "none")
+  
+p4.3
+```
+
+quantiles
+
+```{r}
+drift_acc_diff_1_q <- drift_acc_diff_1 %>%
+  group_by(condition) %>% 
+  median_qi(diff)
+drift_acc_diff_1_q
+```
+
+difference between unf (true and false) > fam (true > false)
+
+plot
+
+```{r}
+p4.4 <- ggplot(drift_acc_cond_diff_1, aes(x = diff, y = "")) +
+  stat_halfeye(fill = "firebrick", alpha = 0.9) +
+  geom_vline(xintercept = 0, color = "darkgrey") +
+  labs(title = "Group level: Drift rate (Novel > Learned)",
+       x="Drift rate", y="") +
+  xlim(0,2.5)
+p4.4
+```
+
+quantiles
+
+```{r}
+drift_acc_cond_diff_1_q <- drift_acc_cond_diff_1 %>%
+  median_qi(diff)
+drift_acc_cond_diff_1_q
+```
+
+## plot together ##
+
+```{r}
+p4.5 <- p4.3 | p4.4 +
+  labs(caption = "80% and 95% credible intervals shown in black")
+p4.5
+
+# save a figure
+ggsave("figures/drift_rat_mini_1.jpeg",
+       width = 15, height = 10)
+```
+
+## plot the average difference and pid differences ##
+
+```{r}
+drift_acc_cond_diff_pid_1$pid = with(drift_acc_cond_diff_pid_1, reorder(pid, diff, mean))
+p4.6 <- ggplot(drift_acc_cond_diff_1, aes(x = diff, y=pid)) +  
+  stat_halfeye(alpha = 0.9, fill="firebrick") +
+  stat_halfeye(data = drift_acc_cond_diff_pid_1,
+               alpha = 0.7) +
+  geom_vline(xintercept = 0, color = "darkgrey") +
+  labs(title = "Individual and average 
+drift rate differences", 
+       x = "Drift rate", y="participant ID") 
+p4.6
+```
+
+## combine drift rate plots ##
+
+```{r}
+p4.7 <- p4.3 / p4.4 | p4.6 +
+  labs(caption = "80% and 95% quantile intervals shown in black")
+p4.7 
+
+# save a figure
+ggsave("figures/drift_rate_pid_1.jpeg",
+       width = 15, height = 10)
+```
+
+##Correlations
+#load data
+```{r}
+data_task <- read_csv("data/data_WP3_model.csv")
+data_pupil_mean <- read_csv("data/pupil_metrics/mean_pid.csv")
+data_pupil_max <- read_csv("data/pupil_metrics/max_pid.csv")
+data_pupil_rate <- read_csv("data/pupil_metrics/rate_pid.csv")
+
+#Wrangle pupil data
+data_pupil <- data_pupil_mean %>%
+  mutate(pupil_mean = mean,
+         pupil_max = data_pupil_max$mean,
+         pupil_rate = data_pupil_rate$mean_pupil_change) %>%
+  select(pid, condition, accuracy, pupil_mean, pupil_max, pupil_rate) %>%
+  rename(cond = condition, acc = accuracy)
+```
+
+#wrangle
+```{r}
+data_task_sum <- data_task %>%
+  select(pid,cond,acc,rt) %>%
+  mutate(pid = as.factor(pid)) %>%
+  group_by(pid, cond) %>%
+  summarise(sum = sum(acc),
+            n = n(), # n here is the total trials per grouping
+            prop_correct = sum/n, 
+            rt = mean(rt))
+data_pupil_sum <- data_pupil %>%
+  group_by(pid, cond) %>%
+  summarise(pupil_mean = mean(pupil_mean),
+            pupil_max = mean(pupil_max),
+            pupil_rate = mean(pupil_rate))
+
+data_pupil_corr <- data_task_sum %>%
+  add_column(pupil_mean = data_pupil_sum$pupil_mean) %>%
+  add_column(pupil_max = data_pupil_sum$pupil_max) %>%
+  add_column(pupil_rate = data_pupil_sum$pupil_rate)
+```
+
+#Adding parameters data
+```{r}
+thresh_pid_1_av <- thresh_pid_1 %>%
+  group_by(pid,param) %>%
+  summarise(param_median = median(value)) %>%
+  pivot_wider(names_from = param, values_from = param_mean)
+
+
+drift_rate_pid_1_av <- drift_rate_pid_1 %>%
+  group_by(pid, param) %>%
+  summarise(param_median = mean(value)) %>%
+  pivot_wider(names_from = param, values_from = param_mean)
+
+subject_param <- drift_rate_pid_1_av %>%
+  left_join(
+    thresh_pid_1_av %>%
+      select(pid, B_lRLearned, B_lRNovel), 
+    by = "pid"
+  )
+```
+
+
+
+## Correlations
+
+
+#Correlation between pupil mean and overall accuracy during task
+```{r}
+overall_corr <- data_pupil_corr %>%
+  group_by(pid, pupil_mean, pupil_max, pupil_rate) %>%
+  summarise(accuracy = mean(prop_correct), .groups = "drop")
+
+correlation_overall_mean <- cor(overall_corr$pupil_mean, overall_corr$accuracy)
+cat("Correlation between pupil mean and overall accuracy:", round(correlation_overall_mean, 3), "\n")
+```
+
+
+#Correlation between pupil max and overall accuracy during task
+```{r}
+correlation_overall_max <- cor(overall_corr$pupil_max, overall_corr$accuracy)
+cat("Correlation between maximum pupil dilation and overall accuracy:", round(correlation_overall_max, 3), "\n")
+```
+
+#Correlation between pupil rate and overall accuracy during task
+```{r}
+correlation_overall_rate <- cor(overall_corr$pupil_rate, overall_corr$accuracy)
+cat("Correlation between rate of pupil change and overall accuracy:", round(correlation_overall_rate, 3), "\n")
+```
+
+#Plotting individual differences
+```{r}
+#| label: plot-individual-differences-face
+
+p2.1 <- data_pupil_corr %>%
+  ggplot(aes(x = pupil_mean, y = prop_correct, color = cond)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = TRUE) +
+  facet_wrap(~cond) +
+  stat_cor(method = "pearson") +
+  labs(
+    title = "Correlation of mean pupil size and overall accuracy",
+    x = "Mean pupil size (mm)",
+    y = "Proportion Correct",
+    color = "Condition"
+  ) + scale_color_manual(values = c("Novel" = paletteer_d("rcartocolor::Safe",4)[1],"Learned" =  paletteer_d("rcartocolor::Safe",4)[2])) 
+print(p2.1)
+
+ggsave("figures/cor/correlation_mean_condition.jpeg",
+       width = 12, height =8)
+```
+
+Overall
+```{r}
+overall_data_pupil_corr <- data_pupil_corr %>%
+  group_by(pid) %>%
+  summarise(pupil_mean = mean(pupil_mean),
+            pupil_max = mean(pupil_max),
+            pupil_rate = mean(pupil_rate),
+            prop_correct = mean(prop_correct))
+
+p2.1.1 <- overall_data_pupil_corr %>%
+  ggplot(aes(x = pupil_mean, y = prop_correct)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = TRUE) +
+  stat_cor(method = "pearson") +
+  labs(
+    title = "Correlation between mean pupil size
+and accuracy",
+    x = "Mean pupil size (mm)",
+    y = "Proportion Correct",
+  ) 
+  
+print(p2.1.1)
+
+ggsave(ggsave("figures/cor/correlation_mean_accuracy_overall.jpeg",
+       width = 12, height =8))
+```
+
+
+#Max pupil size
+#Plotting individual differences
+```{r}
+#| label: plot-individual-differences
+
+p2.2 <- data_pupil_corr %>%
+  ggplot(aes(x = pupil_max, y = prop_correct, color = cond)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = TRUE) +
+  facet_wrap(~cond) +
+  stat_cor(method = "pearson") +
+  labs(
+    title = "Correlation of maximum pupil dilation and overall accuracy",
+    x = "Maximum pupil dilation (mm)",
+    y = "Proportion Correct",
+    color = "Condition"
+  ) + scale_color_manual(values = c("Novel" = paletteer_d("rcartocolor::Safe",4)[1],"Learned" =  paletteer_d("rcartocolor::Safe",4)[2]))
+  
+print(p2.2)
+
+ggsave("figures/cor/correlation_max_accuracy_condition.jpeg",
+       width = 12, height =8)
+```
+
+Overall
+```{r}
+p2.2.1 <- overall_data_pupil_corr %>%
+  ggplot(aes(x = pupil_max, y = prop_correct)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = TRUE) +
+  stat_cor(method = "pearson") +
+  labs(
+    title = "Correlation between maximum pupil dilation
+and accuracy",
+    x = "Maximum pupil dilation (mm)",
+    y = "Proportion Correct",
+  ) 
+  
+print(p2.2.1)
+
+ggsave(ggsave("figures/cor/correlation_max_accuracy_overall.jpeg",
+       width = 12, height =8))
+```
+
+#Rate of pupil change
+```{r}
+p2.2 <- data_pupil_corr %>%
+  ggplot(aes(x = pupil_rate, y = prop_correct, color = cond)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = TRUE) +
+  facet_wrap(~cond) +
+  stat_cor(method = "pearson") +
+  labs(
+    title = "Correlation of rate of pupil change and overall accuracy",
+    x = "Rate of pupil change (mm/ms)",
+    y = "Proportion Correct",
+    color = "Condition"
+  ) + scale_color_manual(values = c("Novel" = paletteer_d("rcartocolor::Safe",4)[1],"Learned" =  paletteer_d("rcartocolor::Safe",4)[2]))
+  
+print(p2.2)
+
+ggsave(ggsave("figures/cor/correlation_rate_accuracy_condition.jpeg",
+       width = 12, height =8))
+```
+
+```{r}
+p2.2.1 <- overall_data_pupil_corr %>%
+  ggplot(aes(x = pupil_rate, y = prop_correct)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = TRUE) +
+  stat_cor(method = "pearson") +
+  labs(
+    title = "Correlation between rate of pupil change
+and accuracy",
+    x = "Rate of pupil change (mm/ms)",
+    y = "Proportion Correct",
+  ) 
+  
+print(p2.2.1)
+
+ggsave("figures/cor/correlation_rate_accuracy_overall.jpeg",
+       width = 12, height =8)
+```
+
+Correlations with parameters
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(stringr)
+
+# Step 1: acc-specific columns (e.g. mean_learned_true)
+acc_wide <- data_pupil %>%
+  mutate(acc_label = ifelse(acc == 1, "true", "false"),
+         cond = tolower(cond)) %>%
+  group_by(pid, cond, acc_label) %>%
+  summarise(across(c(pupil_mean, pupil_max, pupil_rate), mean), .groups = "drop") %>%
+  pivot_wider(
+    names_from = c(cond, acc_label),
+    values_from = c(pupil_mean, pupil_max, pupil_rate),
+    names_sep = "_"
+  ) %>%
+  rename_with(~ str_remove(.x, "pupil_"), starts_with("pupil_"))
+
+# Step 2: condition-level columns collapsed across acc (e.g. mean_learned)
+cond_wide <- data_pupil %>%
+  mutate(cond = tolower(cond)) %>%
+  group_by(pid, cond) %>%
+  summarise(across(c(pupil_mean, pupil_max, pupil_rate), mean), .groups = "drop") %>%
+  pivot_wider(
+    names_from = cond,
+    values_from = c(pupil_mean, pupil_max, pupil_rate),
+    names_sep = "_"
+  ) %>%
+  rename_with(~ str_remove(.x, "pupil_"), starts_with("pupil_"))
+
+# Step 3: join both
+pupil_wide <- left_join(cond_wide, acc_wide, by = "pid")
+
+# Join parameter together
+thresh_wide <- thresh_pid_1 |>
+  select(pid, param, value, datapoint) |>
+  pivot_wider(names_from = param, values_from = value)
+
+drift_wide <- drift_rate_pid_1 |>
+  select(pid, param, value, datapoint) |>
+  pivot_wider(names_from = param, values_from = value)
+
+derived_samples_wide <- thresh_wide |>
+  left_join(drift_wide, by = c("pid", "datapoint"))
+
+
+# ---- 1. Prepare parameter dataframe ----
+params <- param_1_pid %>%
+  mutate(
+    threshold_diff = B_lRNovel - B_lRLearned,
+    drift_rate_learned = `v_SLearned:lMTRUE` - `v_SLearned:lMFALSE`,
+    drift_rate_novel   = `v_SNovel:lMTRUE` - `v_SNovel:lMFALSE`,
+    drift_diff = drift_rate_novel - drift_rate_learned
+  ) %>%
+  rename(
+    threshold_learned = B_lRLearned,
+    threshold_novel    = B_lRNovel,
+    drift_learned_false = `v_SLearned:lMFALSE`,
+    drift_learned_true  = `v_SLearned:lMTRUE`,
+    drift_novel_false   = `v_SNovel:lMFALSE`,
+    drift_novel_true    = `v_SNovel:lMTRUE`,
+    pid = "subjects"
+  )
+
+# ---- 2. Add matching pupil difference scores to pupil_wide ----
+pupil_wide <- pupil_wide %>%
+  mutate(
+    mean_diff = mean_novel - mean_learned,
+    max_diff  = max_novel  - max_learned,
+    rate_diff = rate_novel - rate_learned,
+    mean_diff_learned = mean_learned_true - mean_learned_false,
+    mean_diff_novel   = mean_novel_true   - mean_novel_false,
+    mean_diff_diff    = mean_diff_novel - mean_diff_learned,
+    max_diff_learned = max_learned_true - max_learned_false,
+    max_diff_novel   = max_novel_true   - max_novel_false,
+    max_diff_diff    = max_diff_novel - max_diff_learned,
+    rate_diff_learned = rate_learned_true - rate_learned_false,
+    rate_diff_novel   = rate_novel_true   - rate_novel_false,
+    rate_diff_diff    = rate_diff_novel - rate_diff_learned,
+  ) 
+
+
+params_median <- params %>%
+  group_by(pid) %>%
+  summarise(across(
+    c(threshold_learned, threshold_novel,
+      drift_learned_true, drift_learned_false,
+      drift_novel_true, drift_novel_false,
+      drift_rate_learned, drift_rate_novel),
+    median, .names = "{.col}"
+  ), .groups = "drop")
+
+# ---- 3. Merge ----
+full_df <- left_join(params_median, pupil_wide, by = "pid")
+
+# ---- 4. Define meaningful parameter <-> pupil metric pairings ----
+# Each entry: parameter column name -> matching pupil column suffix (per metric)
+pairings <- tribble(
+  ~param_col,            ~pupil_suffix,
+  "threshold_learned",   "learned",
+  "threshold_novel",     "novel",
+  "threshold_diff",      "diff",
+  "drift_learned_true",  "learned_true",
+  "drift_learned_false", "learned_false",
+  "drift_novel_true",    "novel_true",
+  "drift_novel_false",   "novel_false",
+  "drift_rate_learned",  "diff_learned",
+  "drift_rate_novel",    "diff_novel",
+  "drift_diff",          "diff_diff"
+)
+
+metrics <- c("mean", "max", "rate")
+
+pairings_full <- pairings %>%
+  crossing(metric = metrics) %>%
+  mutate(pupil_col = paste0(metric, "_", pupil_suffix)) %>%
+  filter(pupil_col %in% names(pupil_wide))
+
+# ---- 5. Compute correlations ----
+cor_results <- pairings_full %>%
+  mutate(
+    test = map2(param_col, pupil_col, function(p, q) {
+      x <- full_df[[p]]
+      y <- full_df[[q]]
+      ct <- cor.test(x, y, use = "pairwise.complete.obs")
+      tibble(r = unname(ct$estimate), p_value = ct$p.value, n = sum(complete.cases(x, y)))
+    })
+  ) %>%
+  unnest(test) %>%
+  select(parameter = param_col, metric, pupil_column = pupil_col, r, p_value, n)
+
+print(cor_results)
+
+
+
+
+params_samples <- param_1_pid %>%
+  mutate(
+    threshold_diff      = B_lRNovel - B_lRLearned,
+    drift_rate_learned  = `v_SLearned:lMTRUE` - `v_SLearned:lMFALSE`,
+    drift_rate_novel    = `v_SNovel:lMTRUE` - `v_SNovel:lMFALSE`,
+    drift_diff          = drift_rate_novel - drift_rate_learned
+  ) %>%
+  rename(
+    threshold_learned   = B_lRLearned,
+    threshold_novel     = B_lRNovel,
+    drift_learned_false = `v_SLearned:lMFALSE`,
+    drift_learned_true  = `v_SLearned:lMTRUE`,
+    drift_novel_false   = `v_SNovel:lMFALSE`,
+    drift_novel_true    = `v_SNovel:lMTRUE`,
+    pid = "subjects"
+  )
+
+
+
+# Join with pupil_wide — pupil values repeat across all datapoints per pid
+params_merged <- params_samples %>%
+  left_join(pupil_wide, by = "pid")
+
+params_merged <- params_samples %>%
+  group_by(pid) %>%
+  mutate(datapoint = row_number()) %>%
+  ungroup() %>%
+  left_join(pupil_wide, by = "pid")
+
+# ---- 7. Compute r for every sample, for every pairing ----
+compute_sample_cors <- function(param_col, pupil_col, data) {
+  data_split <- split(data, data$datapoint)  # use datapoint, not sample
+  vapply(data_split, function(d) {
+    cor(d[[param_col]], d[[pupil_col]], use = "pairwise.complete.obs")
+  }, numeric(1))
+}
+
+sample_cors <- pairings_full %>%
+  mutate(
+    r_values = map2(param_col, pupil_col, ~ compute_sample_cors(.x, .y, params_merged))
+  )
+
+# ---- 8. Unnest into long dataframe ----
+cor_results_samples <- sample_cors %>%
+  select(param_col, metric, pupil_col, r_values) %>%
+  mutate(sample = map(r_values, ~ as.numeric(names(.x)))) %>%
+  unnest(c(r_values, sample)) %>%
+  rename(parameter = param_col, pupil_metric = metric, pupil_column = pupil_col, r = r_values)
+
+print(cor_results_samples)
+```
+
+
+## Plotting the correlations
+```{r}
+library(ggplot2)
+
+plot_data_list <- pairings_full %>%
+  mutate(
+    plot_df = map2(param_col, pupil_col, function(p, q) {
+      full_df %>%
+        select(pid, x = all_of(p), y = all_of(q)) %>%
+        mutate(parameter = p, pupil_col = q)
+    })
+  ) %>%
+  pull(plot_df) %>%
+  bind_rows() %>%
+  left_join(cor_results, by = c("parameter" = "parameter", "pupil_col" = "pupil_column"))
+
+make_scatter_plot <- function(metric_name) {
+  df_sub <- plot_data_list %>%
+    semi_join(pairings_full %>% filter(metric == metric_name),
+              by = c("parameter" = "param_col", "pupil_col" = "pupil_col"))
+
+  ggplot(df_sub, aes(x = x, y = y)) +
+    geom_point(size = 2, alpha = 0.7) +
+    geom_smooth(method = "lm", se = TRUE, color = "steelblue") +
+    facet_wrap(~ parameter, scales = "free") +
+    geom_text(
+      data = df_sub %>% distinct(parameter, r, p_value),
+      aes(x = -Inf, y = Inf,
+          label = sprintf("r = %.2f, p = %.3f", r, p_value)),
+      hjust = -0.1, vjust = 1.5, inherit.aes = FALSE, size = 3.5
+    ) +
+    labs(title = paste("Correlations with pupil", metric_name, "(median parameter values)"),
+         x = "LBA parameter (median posterior value)", y = paste("Pupil", metric_name)) +
+    theme_minimal()
+}
+
+plot_mean <- make_scatter_plot("mean")
+plot_max  <- make_scatter_plot("max")
+plot_rate <- make_scatter_plot("rate")
+
+plot_mean
+ggsave("figures/cor/point_estimate_cor_mean.jpeg", height = 10, width = 15)
+plot_max
+ggsave("figures/cor/point_estimate_cor_max.jpeg", height = 10, width = 15)
+plot_rate
+ggsave("figures/cor/point_estimate_cor_rate.jpeg", height = 10, width = 15)
+```
+
+```{r}
+library(ggdist)
+
+make_halfeye_plot <- function(metric_name) {
+  df_sub <- cor_results_samples %>%
+    filter(pupil_metric == metric_name)
+  
+  ggplot(df_sub, aes(x = r, y = parameter)) +
+    stat_halfeye(fill = "steelblue", alpha = 0.7) +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
+    facet_wrap(~ parameter, scales = "free_y", ncol = 1) +
+    labs(title = paste("Posterior correlations with pupil", metric_name),
+         x = "Correlation (r)", y = NULL) +
+    theme_minimal() +
+    theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+}
+
+halfeye_mean <- make_halfeye_plot("mean")
+halfeye_max  <- make_halfeye_plot("max")
+halfeye_rate <- make_halfeye_plot("rate")
+
+halfeye_mean
+ggsave("figures/cor/post_cor_mean.jpeg", height = 12, width = 10)
+halfeye_max
+ggsave("figures/cor/post_cor_max.jpeg", height = 12, width = 10)
+halfeye_rate
+ggsave("figures/cor/post_cor_rate.jpeg", height = 12, width = 10)
+```
+
+
+Plotting contrasts:
+```{r}
+library(paletteer)
+library(patchwork)
+
+myColors <- c("Novel" = paletteer_d("rcartocolor::Safe", 4)[1],
+              "Learned" = paletteer_d("rcartocolor::Safe", 4)[2])
+
+make_halfeye_contrast_plot <- function(metric_name) {
+  
+  # Drift rate contrast: learned vs novel
+  drift_contrast <- cor_results_samples %>%
+    filter(pupil_metric == metric_name,
+           parameter %in% c("drift_rate_learned", "drift_rate_novel")) %>%
+    mutate(
+      condition = ifelse(parameter == "drift_rate_novel", "Novel", "Learned"),
+      contrast  = "Drift rate: Learned vs Novel"
+    )
+  
+  # Threshold contrast: learned vs novel
+  thresh_contrast <- cor_results_samples %>%
+    filter(pupil_metric == metric_name,
+           parameter %in% c("threshold_learned", "threshold_novel")) %>%
+    mutate(
+      condition = ifelse(parameter == "threshold_novel", "Novel", "Learned"),
+      contrast  = "Threshold: Learned vs Novel"
+    )
+  
+  df_sub <- bind_rows(drift_contrast, thresh_contrast)
+  
+  ggplot(df_sub, aes(x = r, y = condition, fill = condition)) +
+    stat_halfeye(alpha = 0.7) +
+    scale_fill_manual(values = myColors) +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
+    facet_wrap(~ contrast, ncol = 1, scales = "free_y") +
+    labs(
+      title = paste("Posterior correlation contrasts — pupil", metric_name),
+      x = "Correlation (r)", y = NULL, fill = "Condition"
+    ) +
+    theme_minimal() +
+    theme(
+      text = element_text(face = "bold"),          
+      axis.text.y = element_text(face = "bold"),   
+      axis.ticks.y = element_blank(),
+      legend.position = "none"
+)
+}
+
+contrast_mean <- make_halfeye_contrast_plot("mean")
+contrast_max  <- make_halfeye_contrast_plot("max")
+contrast_rate <- make_halfeye_contrast_plot("rate")
+
+contrast_mean
+ggsave("figures/cor/post_cor_mean_contrasts.jpeg", height = 12, width = 10)
+contrast_max
+ggsave("figures/cor/post_cor_max_contrasts.jpeg", height = 12, width = 10)
+contrast_rate
+ggsave("figures/cor/post_cor_rate_contrasts.jpeg", height = 12, width = 10)
+
+
+
+```
+
+
+
+
+
+
+PLot posterior correlation distributions
+Mean Pupil
+
+Disclaimer: here only the correlations that make sense (Learned_Parameter with Learned_pupil metrics)
+```{r}
+# Plot face
+p10.1 <- ggplot(correlation_draws_rate, aes(x = correlation_rate_learned_true)) +  
+  stat_halfeye(alpha = 0.9, .width = c(0.5, 0.95)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    title = "Posterior Correlation Distributions",
+    subtitle = "Correlations between Mean pupil size and LBA parameters across draws",
+    x = "Correlation with Face Recognition", 
+    y = "Density"
+  ) +
+  facet_wrap(~parameter, scale = "free_x", nrow = 2) 
+
+print(p10.1)
+
+ggsave("figures/posterior_correlation_distribution_mean_learned.jpeg",
+       width = 16, height = 12)
+
+# Plot car
+p10.2 <- ggplot(correlation_draws, aes(x = correlation_car)) +  
+  stat_halfeye(alpha = 0.9, .width = c(0.5, 0.95)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    title = "Posterior Correlation Distributions",
+    subtitle = "Correlations between car recognition and LBA parameters across draws",
+    x = "Correlation with Car Recognition", 
+    y = "Density"
+  ) +
+  facet_wrap(~parameter, scale = "free_x", nrow = 1) 
+
+print(p10.2)
+
+ggsave("WP2_1/figures/posterior_correlation_distribution_car.jpeg",
+       width = 16, height = 12)
+
+
+```
+
+
+
+Plot threshold and drift rate separately
+# Mean pupil size
+```{r}
+#Plot mean / threshold
+facets <- c("B_lRNovel","B_lRLearned", "threshold_diff")
+p10.3 <- ggplot(correlation_draws[correlation_draws$parameter %in% facets,], aes(x = correlation_face)) +  
+  stat_halfeye(alpha = 0.9, .width = c(0.5, 0.95)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    title = "Posterior Correlation Distributions",
+    subtitle = "Correlations between face recognition and threshold parameters across draws",
+    x = "Correlation with Face Recognition", 
+    y = "Density"
+  ) +
+  facet_wrap(~factor(parameter, facets), scale = "free_x", nrow = 1) 
+
+print(p10.3)
+
+ggsave("WP2_1/figures/posterior_correlation_distribution_face_threshold.jpeg",
+       width = 16, height = 12)
+
+#Plot face drift rate
+facets <- c("v_SLearned:lMFALSE","v_SLearned:lMTRUE", "drift_diff_learned","v_SNovel:lMFALSE", "v_SNovel:lMTRUE","drift_diff_novel")
+p10.4 <- ggplot(correlation_draws[correlation_draws$parameter %in% facets,], aes(x = correlation_face)) +  
+  stat_halfeye(alpha = 0.9, .width = c(0.5, 0.95)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    title = "Posterior Correlation Distributions",
+    subtitle = "Correlations between face recognition and drift rate parameters across draws",
+    x = "Correlation with Face Recognition", 
+    y = "Density"
+  ) +
+  facet_wrap(~factor(parameter, facets), scale = "free_x", nrow = 2) 
+
+print(p10.4)
+
+ggsave("WP2_1/figures/posterior_correlation_distribution_face_drift.jpeg",
+       width = 16, height = 12)
+
+```
+#Car
+```{r}
+#Plot car threshold
+facets <- c("B_lRNovel","B_lRLearned", "threshold_diff")
+p10.3 <- ggplot(correlation_draws[correlation_draws$parameter %in% facets,], aes(x = correlation_car)) +  
+  stat_halfeye(alpha = 0.9, .width = c(0.5, 0.95)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    title = "Posterior Correlation Distributions",
+    subtitle = "Correlations between face recognition and threshold parameters across draws",
+    x = "Correlation with Face Recognition", 
+    y = "Density"
+  ) +
+  facet_wrap(~factor(parameter, facets), scale = "free_x", nrow = 1) 
+
+print(p10.3)
+
+ggsave("WP2_1/figures/posterior_correlation_distribution_face_threshold.jpeg",
+       width = 16, height = 12)
+
+#Plot car drift rate
+facets <- c("v_SLearned:lMFALSE","v_SLearned:lMTRUE", "drift_diff_learned","v_SNovel:lMFALSE", "v_SNovel:lMTRUE","drift_diff_novel")
+p10.4 <- ggplot(correlation_draws[correlation_draws$parameter %in% facets,], aes(x = correlation_car)) +  
+  stat_halfeye(alpha = 0.9, .width = c(0.5, 0.95)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    title = "Posterior Correlation Distributions",
+    subtitle = "Correlations between face recognition and drift rate parameters across draws",
+    x = "Correlation with Face Recognition", 
+    y = "Density"
+  ) +
+  facet_wrap(~factor(parameter, facets), scale = "free_x", nrow = 2) 
+
+print(p10.4)
+
+ggsave("WP2_1/figures/posterior_correlation_distribution_face_drift.jpeg",
+       width = 16, height = 12)
+
+```
+Plot together correlations for face and car
+```{r}
+correlation_draws_plot <- correlation_draws %>%
+  pivot_longer(!c(sample, parameter, n_subjects), names_to = "Recognition_task", values_to = "values") %>%
+  mutate(Recognition_task = as.factor(Recognition_task),
+    Recognition_task = fct_recode(Recognition_task,"Car score correlation" = "correlation_car", "Face score correlation" = "correlation_face"))
+
+#Plots for threshold
+facets_thresh <- c("B_lRNovel","B_lRLearned", "threshold_diff")
+p10.5 <- ggplot(correlation_draws_plot[correlation_draws_plot$parameter %in% facets_thresh,], aes(x = values)) +  
+  stat_halfeye(aes(fill = Recognition_task), alpha = 0.9, .width = c(0.5, 0.95)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    title = "Posterior Correlation Distributions",
+    subtitle = "Correlations between face recognition and car recognition 
+with threshold parameters across draws",
+    x = "Correlation", 
+    y = "Density"
+  ) +
+  facet_wrap(~factor(parameter, facets_thresh), scale = "free_x", nrow = 1) 
+
+print(p10.5)
+
+ggsave("WP2_1/figures/posterior_correlation_distribution_car_face_thresh.jpeg",
+       width = 16, height = 12)
+
+#Plots for drift rate
+facets_drift <- c("v_SLearned:lMFALSE","v_SLearned:lMTRUE", "drift_diff_learned","v_SNovel:lMFALSE", "v_SNovel:lMTRUE","drift_diff_novel")
+p10.6 <- ggplot(correlation_draws_plot[correlation_draws_plot$parameter %in% facets_drift,], aes(x = values)) +  
+  stat_halfeye(aes(fill = Recognition_task), alpha = 0.9, .width = c(0.5, 0.95)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    title = "Posterior Correlation Distributions",
+    subtitle = "Correlations between face recognition and car recognition
+and drift rate parameters across draws",
+    x = "Correlation", 
+    y = "Density"
+  ) +
+  facet_wrap(~factor(parameter, facets_drift), scale = "free_x", nrow = 2) 
+
+print(p10.6)
+
+ggsave("WP2_1/figures/posterior_correlation_distribution_car_face_drift.jpeg",
+       width = 16, height = 12)
+```
+Difference between car and face posterior correlations
+```{r}
+#Plots for threshold
+correlations_diff_thresh <- correlation_draws_plot %>%
+  filter(parameter == "B_lRLearned" | parameter == "B_lRNovel" |parameter == "threshold_diff") %>%
+  group_by(sample, parameter) %>%
+  summarise(diff = values[Recognition_task == "Face score correlation"] - values[Recognition_task == "Car score correlation"])
+
+facets_thresh <- c("B_lRNovel","B_lRLearned", "threshold_diff")
+p10.7 <- ggplot(correlations_diff_thresh[correlations_diff_thresh$parameter %in% facets_thresh,], aes(x = diff)) +  
+  stat_halfeye(fill = "firebrick", alpha = 0.9, .width = c(0.5, 0.95)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    title = "Posterior Correlation Distributions",
+    subtitle = "Correlations difference between face recognition and car recognition 
+with threshold parameters across draws",
+    x = "Correlation difference (face > car)", 
+    y = "Density"
+  ) +
+  facet_wrap(~factor(parameter, facets_thresh), scale = "free_x", nrow = 1) 
+
+print(p10.7)
+
+ggsave("WP2_1/figures/posterior_correlation_distribution_diff_thresh.jpeg",
+       width = 16, height = 12)
+
+#Plots for drift rate
+correlations_diff_drift <- correlation_draws_plot %>%
+  filter(parameter == "v_SLearned:lMFALSE" | parameter == "v_SLearned:lMTRUE" | parameter == "drift_diff_learned"| parameter == "v_SNovel:lMFALSE"
+         | parameter == "v_SNovel:lMTRUE" | parameter == "drift_diff_novel") %>%
+  group_by(sample, parameter) %>%
+  summarise(diff = values[Recognition_task == "Face score correlation"] - values[Recognition_task == "Car score correlation"])
+
+facets_drift <- c("v_SLearned:lMFALSE","v_SLearned:lMTRUE", "drift_diff_learned","v_SNovel:lMFALSE", "v_SNovel:lMTRUE","drift_diff_novel")
+p10.8 <- ggplot(correlations_diff_drift[correlations_diff_drift$parameter %in% facets_drift,], aes(x = diff)) +  
+  stat_halfeye(fill = "firebrick", alpha = 0.9, .width = c(0.5, 0.95)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    title = "Posterior Correlation Distributions",
+    subtitle = "Correlations between face recognition and car recognition
+and drift rate parameters across draws",
+    x = "Correlation difference (face > car)", 
+    y = "Density"
+  ) +
+  facet_wrap(~factor(parameter, facets_drift), scale = "free_x", nrow = 2) 
+
+print(p10.8)
+
+ggsave("WP2_1/figures/posterior_correlation_distribution_diff_drift.jpeg",
+       width = 16, height = 12)
+```
+
+
+
+```{r}
+# Check how many parameters have sufficient variability
+#Face
+sufficient_var_count_face <- sum(correlation_summary_face$sufficient_variability)
+total_params_face <- nrow(correlation_summary_face)
+
+cat("\nValidation Results:\n")
+cat("Parameters with sufficient correlation variability (SD > 0.01):", sufficient_var_count_face, "out of", total_params_face, "\n")
+
+#Car
+sufficient_var_count_car <- sum(correlation_summary_car$sufficient_variability)
+total_params_car <- nrow(correlation_summary_car)
+
+cat("\nValidation Results:\n")
+cat("Parameters with sufficient correlation variability (SD > 0.01):", sufficient_var_count_car, "out of", total_params_car, "\n")
+```
+
+#Save data
+```{r}
+#Save the samples for all parameters, for each participant with the face recognition score centered
+write_csv(derived_samples_long, "WP2_1/data/derived_samples_long.csv")
+write_csv(derived_samples_wide, "WP2_1/data/derived_samples_wide.csv")
+
+#Save the correlations draws
+write_csv(correlation_draws, "WP2_1/data/correlations_draws.csv")
+write_csv(correlation_summary_car, "WP2_1/data/correlations_summary_car.csv")
+write_csv(correlation_summary_face, "WP2_1/data/correlations_summary_face.csv")
+```
+
+
+
+
+
+

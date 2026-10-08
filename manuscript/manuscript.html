@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Raphaël Fournier">
+<meta name="author" content="Paul Downing">
+<meta name="author" content="Richard Ramsey">
+<meta name="dcterms.date" content="2026-10-01">
+<meta name="keywords" content="face perception, pupillometry, familiarity, decision models, evidence accumulation modelling, joint-modelling">
+
+<title>Title: Pupil stuff</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="manuscript_files/libs/clipboard/clipboard.min.js"></script>
+<script src="manuscript_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="manuscript_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="manuscript_files/libs/quarto-html/popper.min.js"></script>
+<script src="manuscript_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="manuscript_files/libs/quarto-html/anchor.min.js"></script>
+<link href="manuscript_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="manuscript_files/libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="manuscript_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="manuscript_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="manuscript_files/libs/bootstrap/bootstrap-fe6853329b567fd5d0b87211734a8b84.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active" data-toc-expanded="99">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a></li>
+  <li><a href="#method-and-materials" id="toc-method-and-materials" class="nav-link" data-scroll-target="#method-and-materials"><span class="header-section-number">2</span> Method and Materials</a>
+  <ul class="collapse">
+  <li><a href="#pre-registration-and-open-science" id="toc-pre-registration-and-open-science" class="nav-link" data-scroll-target="#pre-registration-and-open-science"><span class="header-section-number">2.1</span> Pre-registration and open science</a></li>
+  <li><a href="#participants" id="toc-participants" class="nav-link" data-scroll-target="#participants"><span class="header-section-number">2.2</span> Participants</a></li>
+  <li><a href="#material" id="toc-material" class="nav-link" data-scroll-target="#material"><span class="header-section-number">2.3</span> Material</a></li>
+  <li><a href="#procedure" id="toc-procedure" class="nav-link" data-scroll-target="#procedure"><span class="header-section-number">2.4</span> Procedure</a></li>
+  <li><a href="#stimuli" id="toc-stimuli" class="nav-link" data-scroll-target="#stimuli"><span class="header-section-number">2.5</span> Stimuli</a></li>
+  <li><a href="#pupil-preprocessing-and-pupil-metrics" id="toc-pupil-preprocessing-and-pupil-metrics" class="nav-link" data-scroll-target="#pupil-preprocessing-and-pupil-metrics"><span class="header-section-number">2.6</span> Pupil preprocessing and pupil metrics</a></li>
+  <li><a href="#evidence-accumulation-modeling" id="toc-evidence-accumulation-modeling" class="nav-link" data-scroll-target="#evidence-accumulation-modeling"><span class="header-section-number">2.7</span> Evidence accumulation modeling</a>
+  <ul class="collapse">
+  <li><a href="#model-specifications" id="toc-model-specifications" class="nav-link" data-scroll-target="#model-specifications"><span class="header-section-number">2.7.1</span> Model specifications</a></li>
+  <li><a href="#model-estimation" id="toc-model-estimation" class="nav-link" data-scroll-target="#model-estimation"><span class="header-section-number">2.7.2</span> Model estimation</a></li>
+  <li><a href="#model-fit" id="toc-model-fit" class="nav-link" data-scroll-target="#model-fit"><span class="header-section-number">2.7.3</span> Model fit</a></li>
+  </ul></li>
+  <li><a href="#data-analysis" id="toc-data-analysis" class="nav-link" data-scroll-target="#data-analysis"><span class="header-section-number">2.8</span> Data analysis</a>
+  <ul class="collapse">
+  <li><a href="#overview-of-the-general-analytical-strategy" id="toc-overview-of-the-general-analytical-strategy" class="nav-link" data-scroll-target="#overview-of-the-general-analytical-strategy"><span class="header-section-number">2.8.1</span> Overview of the general analytical strategy</a></li>
+  <li><a href="#lba-parameters" id="toc-lba-parameters" class="nav-link" data-scroll-target="#lba-parameters"><span class="header-section-number">2.8.2</span> LBA parameters</a></li>
+  <li><a href="#pupil-metrics" id="toc-pupil-metrics" class="nav-link" data-scroll-target="#pupil-metrics"><span class="header-section-number">2.8.3</span> Pupil metrics</a></li>
+  <li><a href="#general-additive-mixed-model-gamm" id="toc-general-additive-mixed-model-gamm" class="nav-link" data-scroll-target="#general-additive-mixed-model-gamm"><span class="header-section-number">2.8.4</span> General additive mixed model (GAMM)</a></li>
+  <li><a href="#classical-correlational-analysis" id="toc-classical-correlational-analysis" class="nav-link" data-scroll-target="#classical-correlational-analysis"><span class="header-section-number">2.8.5</span> Classical correlational analysis</a></li>
+  <li><a href="#bayesian-plausible-value-correlational-analysis" id="toc-bayesian-plausible-value-correlational-analysis" class="nav-link" data-scroll-target="#bayesian-plausible-value-correlational-analysis"><span class="header-section-number">2.8.6</span> Bayesian plausible value correlational analysis</a></li>
+  <li><a href="#joint-modelling" id="toc-joint-modelling" class="nav-link" data-scroll-target="#joint-modelling"><span class="header-section-number">2.8.7</span> Joint modelling</a></li>
+  <li><a href="#inferential-criteria" id="toc-inferential-criteria" class="nav-link" data-scroll-target="#inferential-criteria"><span class="header-section-number">2.8.8</span> Inferential criteria</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#results" id="toc-results" class="nav-link" data-scroll-target="#results"><span class="header-section-number">3</span> Results</a>
+  <ul class="collapse">
+  <li><a href="#lba-parameters-1" id="toc-lba-parameters-1" class="nav-link" data-scroll-target="#lba-parameters-1"><span class="header-section-number">3.1</span> LBA parameters</a></li>
+  <li><a href="#pupil-metrics-1" id="toc-pupil-metrics-1" class="nav-link" data-scroll-target="#pupil-metrics-1"><span class="header-section-number">3.2</span> Pupil metrics</a></li>
+  <li><a href="#general-additive-mixed-model-gamm-1" id="toc-general-additive-mixed-model-gamm-1" class="nav-link" data-scroll-target="#general-additive-mixed-model-gamm-1"><span class="header-section-number">3.3</span> General additive mixed model (GAMM)</a></li>
+  <li><a href="#point-estimates-correlations" id="toc-point-estimates-correlations" class="nav-link" data-scroll-target="#point-estimates-correlations"><span class="header-section-number">3.4</span> Point estimates correlations</a></li>
+  <li><a href="#bayesian-plausible-value-correlational-analysis-1" id="toc-bayesian-plausible-value-correlational-analysis-1" class="nav-link" data-scroll-target="#bayesian-plausible-value-correlational-analysis-1"><span class="header-section-number">3.5</span> Bayesian plausible value correlational analysis</a></li>
+  <li><a href="#joint-model" id="toc-joint-model" class="nav-link" data-scroll-target="#joint-model"><span class="header-section-number">3.6</span> Joint model</a></li>
+  </ul></li>
+  <li><a href="#discussion" id="toc-discussion" class="nav-link" data-scroll-target="#discussion"><span class="header-section-number">4</span> Discussion</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="manuscript.pdf"><i class="bi bi-file-pdf"></i>Typst (preprint)</a></li><li><a href="manuscript.docx"><i class="bi bi-file-word"></i>MS Word (preprint)</a></li></ul></div><div class="quarto-other-links"><h2>Other Links</h2><ul><li><a href="https://osf.io/preprints/psyarxiv/"><i class="bi bi-file-pdf"></i>Preprint (PsyArXiv)</a></li><li><a href="https://rich-ramsey.github.io/preprint-example"><i class="bi bi-globe2"></i>Online supplement</a></li><li><a href="supplementary.pdf"><i class="bi bi-file-pdf"></i>Supplementary Materials (PDF)</a></li><li><a href="https://github.com/rich-ramsey/"><i class="bi bi-github"></i>GitHub Repository</a></li><li><a href="https://osf.io/65bt2"><i class="bi bi-archive"></i>OSF Repository</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Title: Pupil stuff</h1>
+</div>
+
+
+<div class="quarto-title-meta-author">
+  <div class="quarto-title-meta-heading">Authors</div>
+  <div class="quarto-title-meta-heading">Affiliations</div>
+  
+    <div class="quarto-title-meta-contents">
+    <p class="author">Raphaël Fournier <a href="https://orcid.org/0000-0002-5135-4066" class="quarto-title-author-orcid"> <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo1N0NEMjA4MDI1MjA2ODExOTk0QzkzNTEzRjZEQTg1NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDozM0NDOEJGNEZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDozM0NDOEJGM0ZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkZDN0YxMTc0MDcyMDY4MTE5NUZFRDc5MUM2MUUwNEREIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjU3Q0QyMDgwMjUyMDY4MTE5OTRDOTM1MTNGNkRBODU3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+84NovQAAAR1JREFUeNpiZEADy85ZJgCpeCB2QJM6AMQLo4yOL0AWZETSqACk1gOxAQN+cAGIA4EGPQBxmJA0nwdpjjQ8xqArmczw5tMHXAaALDgP1QMxAGqzAAPxQACqh4ER6uf5MBlkm0X4EGayMfMw/Pr7Bd2gRBZogMFBrv01hisv5jLsv9nLAPIOMnjy8RDDyYctyAbFM2EJbRQw+aAWw/LzVgx7b+cwCHKqMhjJFCBLOzAR6+lXX84xnHjYyqAo5IUizkRCwIENQQckGSDGY4TVgAPEaraQr2a4/24bSuoExcJCfAEJihXkWDj3ZAKy9EJGaEo8T0QSxkjSwORsCAuDQCD+QILmD1A9kECEZgxDaEZhICIzGcIyEyOl2RkgwAAhkmC+eAm0TAAAAABJRU5ErkJggg=="></a></p>
+  </div>
+  <div class="quarto-title-meta-contents">
+        <p class="affiliation">
+            ETH Zürich
+          </p>
+      </div>
+    <div class="quarto-title-meta-contents">
+    <p class="author">Paul Downing </p>
+  </div>
+  <div class="quarto-title-meta-contents">
+        <p class="affiliation">
+            Bangor University
+          </p>
+      </div>
+    <div class="quarto-title-meta-contents">
+    <p class="author">Richard Ramsey <a href="mailto:rramsey@ethz.ch" class="quarto-title-author-email"><i class="bi bi-envelope"></i></a> <a href="https://orcid.org/0000-0002-0329-2112" class="quarto-title-author-orcid"> <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo1N0NEMjA4MDI1MjA2ODExOTk0QzkzNTEzRjZEQTg1NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDozM0NDOEJGNEZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDozM0NDOEJGM0ZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkZDN0YxMTc0MDcyMDY4MTE5NUZFRDc5MUM2MUUwNEREIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjU3Q0QyMDgwMjUyMDY4MTE5OTRDOTM1MTNGNkRBODU3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+84NovQAAAR1JREFUeNpiZEADy85ZJgCpeCB2QJM6AMQLo4yOL0AWZETSqACk1gOxAQN+cAGIA4EGPQBxmJA0nwdpjjQ8xqArmczw5tMHXAaALDgP1QMxAGqzAAPxQACqh4ER6uf5MBlkm0X4EGayMfMw/Pr7Bd2gRBZogMFBrv01hisv5jLsv9nLAPIOMnjy8RDDyYctyAbFM2EJbRQw+aAWw/LzVgx7b+cwCHKqMhjJFCBLOzAR6+lXX84xnHjYyqAo5IUizkRCwIENQQckGSDGY4TVgAPEaraQr2a4/24bSuoExcJCfAEJihXkWDj3ZAKy9EJGaEo8T0QSxkjSwORsCAuDQCD+QILmD1A9kECEZgxDaEZhICIzGcIyEyOl2RkgwAAhkmC+eAm0TAAAAABJRU5ErkJggg=="></a></p>
+  </div>
+  <div class="quarto-title-meta-contents">
+        <p class="affiliation">
+            ETH Zürich
+          </p>
+        <p class="affiliation">
+            ETH Zürich
+          </p>
+        <p class="affiliation">
+            ETH Zürich
+          </p>
+      </div>
+  </div>
+
+<div class="quarto-title-meta">
+
+      
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">October 1, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+<div>
+  <div class="keywords">
+    <div class="block-title">Keywords</div>
+    <p>face perception, pupillometry, familiarity, decision models, evidence accumulation modelling, joint-modelling</p>
+  </div>
+</div>
+
+</header>
+
+
+<div style="page-break-after: always;"></div>
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>Over the last two decades, pupillometry has become an increasingly popular tool for accessing cognitive processing non-invasively and with high temporal resolution. Pupil size has been linked to a range of cognitive processes, including attention <span class="citation" data-cites="Binda2014 Naber2013 WangMunoz2015">(<a href="#ref-Binda2014" role="doc-biblioref">Binda et al. 2014</a>; <a href="#ref-Naber2013" role="doc-biblioref">Naber et al. 2013</a>; <a href="#ref-WangMunoz2015" role="doc-biblioref">Wang and Munoz 2015</a>)</span>, emotional arousal <span class="citation" data-cites="Bradley2008">(<a href="#ref-Bradley2008" role="doc-biblioref">Bradley et al. 2008</a>)</span>, decision-making <span class="citation" data-cites="Murphy2014 Urai2017">(<a href="#ref-Murphy2014" role="doc-biblioref">Murphy et al. 2014</a>; <a href="#ref-Urai2017" role="doc-biblioref">Urai et al. 2017</a>)</span>, and recognition memory <span class="citation" data-cites="GoldingerPapesh2012 Otero2011">(<a href="#ref-GoldingerPapesh2012" role="doc-biblioref">Goldinger and Papesh 2012</a>; <a href="#ref-Otero2011" role="doc-biblioref">Otero et al. 2011</a>)</span>. In recognition memory specifically, a well-documented pattern is the “pupil old/new effect”: greater pupil dilation for the correct recognition of “old” items than for the correct rejection of “new” items, taken to reflect an association between pupil dynamics and memory strength <span class="citation" data-cites="Otero2011 Vo2008 Lapteva2024">(<a href="#ref-Otero2011" role="doc-biblioref">Otero et al. 2011</a>; <a href="#ref-Vo2008" role="doc-biblioref">Võ et al. 2008</a>; see <a href="#ref-Lapteva2024" role="doc-biblioref">Lapteva and Martarelli 2024</a>, for a meta-analysis)</span>. In this study, we propose a computational approach to investigating the association between face recognition memory and pupil dynamics. Rather than relying solely on response accuracy, we argue that modelling the full distribution of response times for both correct and incorrect responses provides a more detailed characterization of these associations.</p>
+<p>The pupil old/new effect is a well-documented observation in recognition memory experiments using pupillometry. It refers to a larger pupil dilation for correctly recognised “old” stimuli than for correctly rejected “new” stimuli [<span class="citation" data-cites="Vo2008">Võ et al. (<a href="#ref-Vo2008" role="doc-biblioref">2008</a>)</span>; <span class="citation" data-cites="HeaverHutton2011">Heaver and Hutton (<a href="#ref-HeaverHutton2011" role="doc-biblioref">2011</a>)</span>. This difference has been proposed to index the strength of the memory trace <span class="citation" data-cites="Otero2011">(<a href="#ref-Otero2011" role="doc-biblioref">Otero et al. 2011</a>)</span>, and it is larger when recognition relies on recollection rather than familiarity <span class="citation" data-cites="KafkasMontaldi2015 TaikhBodner2022">(<a href="#ref-KafkasMontaldi2015" role="doc-biblioref">Kafkas and Montaldi 2015</a>; <a href="#ref-TaikhBodner2022" role="doc-biblioref">Taikh and Bodner 2022</a>)</span>. The effect also extends to false memories. New items wrongly judged “old” elicit larger dilation than correct rejections, though smaller than hits <span class="citation" data-cites="Otero2011 Montefinese2013 BrocherGraf2016">(<a href="#ref-Otero2011" role="doc-biblioref">Otero et al. 2011</a>; <a href="#ref-Montefinese2013" role="doc-biblioref">Montefinese et al. 2013</a>; <a href="#ref-BrocherGraf2016" role="doc-biblioref">Brocher and Graf 2016</a>)</span>. This suggests that the participant’s subjective judgement of a stimulus as “old” is enough to evoke a stronger pupillary response, regardless of accuracy. Two main explanations have been offered. Early accounts attributed the effect to the greater cognitive effort involved in retrieving an episodic memory <span class="citation" data-cites="Vo2008 GoldingerPapesh2012">(<a href="#ref-Vo2008" role="doc-biblioref">Võ et al. 2008</a>; <a href="#ref-GoldingerPapesh2012" role="doc-biblioref">Goldinger and Papesh 2012</a>)</span>. More recent work instead proposes that recognition acts as a salient signal that triggers an attentional orienting response, because the effect grows when recognition is unexpected <span class="citation" data-cites="Mill2016">(<a href="#ref-Mill2016" role="doc-biblioref">Mill et al. 2016</a>)</span>.</p>
+<p>Pupillometric studies of face recognition remain scarce, but several findings suggest that pupil size is sensitive to face memory. When faces are learned during an experiment, prior exposure modulates pupil responses at test, and these effects appear for both own- and other-race faces <span class="citation" data-cites="Goldinger2009 Wu2012">(<a href="#ref-Goldinger2009" role="doc-biblioref">Goldinger et al. 2009</a>; <a href="#ref-Wu2012" role="doc-biblioref">Wu et al. 2012</a>)</span>. Pupil dilation during encoding also predicts later recognition of faces <span class="citation" data-cites="CroninLippMarinovic2023">(<a href="#ref-CroninLippMarinovic2023" role="doc-biblioref">Cronin et al. 2023</a>)</span>. In eyewitness lineups, participants who correctly identify the culprit show larger pupils for the target than for fillers, sometimes even when they are unsure of their choice, which points to covert recognition <span class="citation" data-cites="ElphickPikeHole2020">(<a href="#ref-ElphickPikeHole2020" role="doc-biblioref">Elphick et al. 2020</a>)</span>. Pre-experimentally familiar faces produce a similar pattern: familiar faces reduce the initial constriction and increase dilation relative to unknown faces, most strongly for one’s own face <span class="citation" data-cites="Schwetlick2025">(<a href="#ref-Schwetlick2025" role="doc-biblioref">Schwetlick et al. 2025</a>)</span>. This familiarity response survives perceptual suppression that abolishes overt recognition <span class="citation" data-cites="MejiaValdesSosaBobes2024">(<a href="#ref-MejiaValdesSosaBobes2024" role="doc-biblioref">Mejía et al. 2024</a>)</span> and appears for personally familiar faces presented in rapid serial streams <span class="citation" data-cites="Chen2026">(<a href="#ref-Chen2026" role="doc-biblioref">Chen et al. 2026</a>)</span>. However, not all studies agree. One study found smaller dilations for more familiar faces, but only during an active task, suggesting that task demands shape the direction of the effect <span class="citation" data-cites="MatyjekBayerDziobek2021">(<a href="#ref-MatyjekBayerDziobek2021" role="doc-biblioref">Matyjek et al. 2021</a>)</span>.</p>
+<p>Paragraph 4: Computational approach Furthermore, the pupil old/new effect has typically been examined by sorting pupil responses according to response accuracy (hits, misses, false alarms and correct rejections). This approach overlooks a second, equally informative aspect of performance: response times. Considering accuracy or response times in isolation can lead to misleading conclusions about the underlying cognitive processes. For example, older adults are slower than younger adults in recognition memory but almost equally accurate, and modelling both measures jointly showed that this slowing reflected more cautious responding and slower non-decisional processing rather than weaker memory evidence <span class="citation" data-cites="Ratcliff2004">(<a href="#ref-Ratcliff2004" role="doc-biblioref">Ratcliff et al. 2004</a>)</span>. Evidence-accumulation models offer a principled solution to this problem <span class="citation" data-cites="Ratcliff1978 BrownHeathcote2008">(<a href="#ref-Ratcliff1978" role="doc-biblioref">Ratcliff 1978</a>; <a href="#ref-BrownHeathcote2008" role="doc-biblioref">Brown and Heathcote 2008</a>)</span>. They assume that decisions arise from the noisy accumulation of evidence until a response threshold is reached, and they decompose choices and full response time distributions into latent components: the rate of evidence accumulation (drift rate), the amount of evidence required to respond (threshold), response bias, and non-decision time (see <a href="#fig-LBA" class="quarto-xref">Figure&nbsp;1</a>). Linking pupil size to these parameters, rather than to raw accuracy categories, can therefore specify which decision process pupil dilation reflects. Previous work has already related pupil dilation to decision thresholds <span class="citation" data-cites="Cavanagh2014">(<a href="#ref-Cavanagh2014" role="doc-biblioref">Cavanagh et al. 2014</a>)</span>, to reduced choice bias in evidence accumulation <span class="citation" data-cites="deGee2014">Gee et al. (<a href="#ref-deGee2017" role="doc-biblioref">2017</a>)</span>, including in memory-based decisions <span class="citation" data-cites="deGee2020">(<a href="#ref-deGee2020" role="doc-biblioref"><span class="nocase">Gee et al.</span> 2020</a>)</span>, and to urgency signals <span class="citation" data-cites="Murphy2016">(<a href="#ref-Murphy2016" role="doc-biblioref">Murphy et al. 2016</a>)</span>.</p>
+<div class="place" data-arguments="bottom, scope: &quot;parent&quot;, float: true">
+<div id="fig-LBA" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-LBA-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/LBA_schematique.png" class="img-fluid figure-img" style="width:90.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-LBA-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Schematic of the linear ballistic accumulator (LBA) model
+</figcaption>
+</figure>
+</div>
+<p><em>This diagram represents the accumulation process one trial of a perceptual decision task for the linear ballistic accumulator (LBA;</em> <span class="citation" data-cites="BrownHeathcote2008">Brown and Heathcote (<a href="#ref-BrownHeathcote2008" role="doc-biblioref">2008</a>)</span><em>). Participants are required to chose between two options (Response 1 and Response 2). In a LBA model, there is a separated accumulation of evidence (v) for each response option. In this example, the correct response is Response 1. The accumulator on the left is the accumulator for the correct response (Response 1), and the green line in represents the rate at which the evidence accumulates in favor of that response option. The accumulator on the right is the accumulator for the incorrect response (Response 2), and the dash red line represents the rate at which the evidence accumulates in favor of this response option. Once the accumulated evidence crosses the threshold (b) of a response option, the corresponding response is chosen (in this case Response 1).</em></p>
+</div>
+<p>Paragraph 5: In the present study, therefore, we combined pupillometry with computational models to investigate how latent computational processes in face recognition are related to pupil size dynamics. We previously investigated the extent to which drift rate and threshold are associated with pupil size dynamics for old (learned) and new (novel) faces <span class="citation" data-cites="fournier2026familiarity">(<a href="#ref-fournier2026familiarity" role="doc-biblioref">Fournier et al. 2026</a>)</span>. Using an old/new recognition task in combination with evidence accumulation modelling to study how familiarity impacts the computational processes that support face recognition, we found that different types of familiarity (visually familiar faces vs.&nbsp;famous faces) had a similar impact on the computational processes involved in the decision-making process of face recognition. Compared to learned faces, novel faces induced a greater accumulation of evidence (drift rate), as well as modest increase in response caution (threshold). Using these results as a baseline, we want to replicate these findings and use a combination of correlationnal approaches to estimate the associations between drift rate/threshold with pupil size.</p>
+<p>Paragraph 6: Joint modelling Beyond estimating post hoc associations between our parameters of interest and pupil metrics, we also fit a joint model linking the behavioural and pupil data directly. Joint modelling offers a way to combine multiple data streams, such as choice/RT data and physiological measures, within a single estimation framework, rather than analyzing each in isolation and relating them afterwards <span class="citation" data-cites="Turner2013 Turner2017 Turner2019">(<a href="#ref-Turner2013" role="doc-biblioref">Turner et al. 2013</a>, <a href="#ref-Turner2017" role="doc-biblioref">2017</a>, <a href="#ref-Turner2019" role="doc-biblioref">2019</a>)</span> . Unlike post hoc correlations, which treat each parameter’s point estimate as fixed and known, joint models estimate the relationship between data sources as part of the same generative process, so that measurement uncertainty in each parameter is propagated into the estimated association rather than discarded <span class="citation" data-cites="Turner2015 Nunez2024">(<a href="#ref-Turner2015" role="doc-biblioref">Turner et al. 2015</a>; <a href="#ref-Nunez2024" role="doc-biblioref">Nunez et al. 2024</a>)</span>. By jointly modelling behavioural (response time and accuracy) and pupil data within a single hierarchical framework, we sought to characterize the magnitude of pupil–behaviour relationships in a way that accounts for this shared uncertainty. It is important to stress that this analysis remains exploratory: our aim was to evaluate the feasibility of jointly modelling LBA and pupillometric data, and no substantive inferences are drawn from its results.</p>
+<p>Based on previous literature, we expect that drift rate for learned (old) faces (the quality of the evidence accumulation for learned faces) to positively correlate with pupil size. Drift rate for novel (new) faces should show a positive but lesser association with pupil size (–&gt; not sure about that). However it is less clear how threshold (response caution towards a response) would associate with pupil size.</p>
+</section>
+<section id="method-and-materials" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Method and Materials</h1>
+<section id="pre-registration-and-open-science" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="pre-registration-and-open-science"><span class="header-section-number">2.1</span> Pre-registration and open science</h2>
+<p>We report how we determined our sample size, all data exclusions (if any), all manipulations, and all measures in the study <span class="citation" data-cites="simonsConstraintsGeneralityCOG2017">(<a href="#ref-simonsConstraintsGeneralityCOG2017" role="doc-biblioref">Simons et al. 2017</a>)</span>. The research question, hypotheses, experimental design, planned analysis, and exclusion criteria were preregistered (<a href="https://osf.io/yr2z6/overview" class="uri">https://osf.io/yr2z6/overview</a>). Raw data and analysis code are available on Github (link github).</p>
+</section>
+<section id="participants" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="participants"><span class="header-section-number">2.2</span> Participants</h2>
+<p>All participants were recruited using either an online recruiting platform (<a href="https://marktplatz.uzhalumni.ch" class="uri">https://marktplatz.uzhalumni.ch</a>) or via a mailing list dedicated to students from the Department of Psychology of the University of Zurich. 34 participants completed the experiment. Following our preregistered exclusion criterion, 1 participant was excluded because their percentage of missed trials was higher than 40%, 1 was removed because the overall accuracy was lower than 55% and finally 1 participant was removed because the percentage of trials containing more that 20% of missing data during the baseline period or during the stimulus presentation was higher than 40%. In the end, data from 31 participants (17 men and 14 women) were retained for the analysis and the LBA modeling. Ages ranged from 19 to 61 (<span class="math inline">\(M_{age} =\)</span> 26.5, <span class="math inline">\(SD_{age} =\)</span> 8.8) and each participant received 25 CHF for the completion of the study. This experiment was accepted by the ethics committee of the Federal Institute of technology (ETH) Zurich.</p>
+</section>
+<section id="material" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="material"><span class="header-section-number">2.3</span> Material</h2>
+<p>Stimuli were presented on a 24-inch monitor (1920 × 1200 px, 60 Hz refresh rate, Philips PHL 240P4QPY) at a viewing distance of approximately 65 cm. Stimulus presentation and response collection were implemented in Psychopy Builder R2024a (version -&gt; check) running on a Linux operating system (Ubuntu 22.04.5 LTS). The code used for the experimental procedure can be found on OSF (link OSF). Pupil data for the left and right eye were recorded using a Tobii Pro Spark (Tobii AB) eye tracking device at a 60 Hz sampling rate and measured in mm. The eye tracking device was placed at the bottom of the desktop computer screen. The head of the participants was fixed using a chin rest, such that the distance between the eyes and the computer screen was the same for all participants (approximately 65 cm).</p>
+</section>
+<section id="procedure" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="procedure"><span class="header-section-number">2.4</span> Procedure</h2>
+<p>The experimental procedure is similar to the one used by <span class="citation" data-cites="fournier2026familiarity">Fournier et al. (<a href="#ref-fournier2026familiarity" role="doc-biblioref">2026</a>)</span>. The face recognition task was divided into two parts: a familiarization part and a recognition part (see <a href="#fig-proc-exp-pupil" class="quarto-xref">Figure&nbsp;2</a>). In the familiarization part, participants were instructed to memorize the identity of unknown faces. One familiarization trial consisted of passively viewing 6 face images of the same identity presented one after the other but varying in viewing points (3/4 left view, frontal view and 3/4 right view) and the colorimetry (colorful image, gray scale image). Each image was presented for 0.75 second and participants underwent 30 familiarization trials. The faces presented during the familiarization part were considered the “Learned faces” within-subject condition.</p>
+<p>In the recognition part, participants completed three blocks of 60 recognition trials, each block being separated from another by a short break. Half of the trials were “Learned” identities and the other half were “Novel”, previously unseen, identities. Each recognition trial was divided into three parts: a fixation cross, a scrambled image of a face and the gray scale image of the same face. During the fixation cross presentation, participants were told to look at the fixation cross in the middle of the screen. They were also instructed to blink during that time if they needed to and to avoid blinking after the fixation cross disappeared. During the scramble image presentation, participant were told to fixate the scramble image, and not to do anything else. Finally, during the face image presentation, participants were asked to choose if they had previously seen this person in the familiarization part or not. If they did, they should press the “q” key and if they did not, the “p” key. One important note is that participants never saw two pictures of the same learned identity in the same block and never the same picture (3/4 left view, frontal view and 3/4 right view) of a learned identity during the entire recognition part. Furthermore, each novel identity picture was only presented once during the recognition part. Response time [s] and accuracy were collected after each recognition trial. A response time limit of 2500 ms has been set for each recognition trial. If participants did not press a key before the response time limit, the trial was discarded from further analysis and not replaced. The experiment took place in a dim light testing room. We measured the illuminance from the chin rest pointing towards the lamps in the ceiling of the resting room (illuminance = 29.5 lux).</p>
+<div class="place" data-arguments="bottom, scope: &quot;parent&quot;, float: true">
+<div id="fig-proc-exp-pupil" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-proc-exp-pupil-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="figures/Experimental_procedure_pupil.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-proc-exp-pupil-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Experimental procedure of the face recognition task
+</figcaption>
+</figure>
+</div>
+<p><em>The experimental procedure was divided into two parts: a familiarization part and a recognition part. a) In the familiarization part, participants were asked to memorize the face identity of 30 identities. For each identity, participants looked at 6 pictures depicting the same identity with different face orientation (3/4 left view, frontal view and 3/4 right view) and different colorimetry (color and gray scale images) in the order presented here: 3/4 left view, frontal view and 3/4 right view in color, followed by 3/4 right view, frontal view and 3/4 left view in gray scale. b) In each trial of the recognition part, participants had to decided if they recognize the face shown on the screen from the familiarization part. If they did, they had to press the “q” key and if the did not, the “p” key. They completed three blocks of 60 trials (half of them were from the familiarization part, half were novel faces). For the recognition part, only gray scale images of faces were used (for both learned faces and novel faces).</em></p>
+</div>
+</section>
+<section id="stimuli" class="level2" data-number="2.5">
+<h2 data-number="2.5" class="anchored" data-anchor-id="stimuli"><span class="header-section-number">2.5</span> Stimuli</h2>
+<p>The face images consisted of images selected from two different data sets: the Face Research Lab London Set ( <a href="https://doi.org/10.6084/m9.figshare.5047666.v5" class="uri">https://doi.org/10.6084/m9.figshare.5047666.v5</a>) and the Color FERET Database (<a href="https://www.nist.gov/itl/products-and-services/color-feret-database" class="uri">https://www.nist.gov/itl/products-and-services/color-feret-database</a>). Check images coming from both data sets. From each selected identity, three face pictures at different viewpoints (3/4 left view, frontal view, ¾ right view) were cropped following the outline of the face and grey scaled. To ensure that the stimuli used are reproducible, we used the webmorphR R Package <span class="citation" data-cites="webmorph">(<a href="#ref-webmorph" role="doc-biblioref">DeBruine 2022</a>)</span> to crop the face images. The code used to crop the images can be found on OSF (link OSF). The pictures obtained at this stage in the image processing pipeline were used in the familiarization part of the experimental task.</p>
+<p>Since pupil size is highly sensitive to brightness and contrast changes between stimuli, we equated the average pixel values (as a measure of brightness) and the standard deviation of pixel values in order to match brightness and contrast (brightness = 30.33, contrast= 41.42; Mathôt and Vilotijević, “Methods in Cognitive Pupillometry.”). These images were then placed on a darker grey background covering the entire desktop screen. For the scrambled image described above, we used a custom Matlab code to scramble all the greyscale image of each face images. To ensure that there were no difference in brightness and contrast between the scrambled image and the face image, the same face image was used in each trial: first, the scrambled version of the image followed by the non-scrambled version of the image. The code used to scramble the face images can be found in OSF (link OSF).</p>
+<p>To assess if there was important variation in the difference between the luminous flux coming from the stimuli and the illuminance of the room, we averaged the luminous flux from all the images which were matched in brightness and contrast. The average luminous flux coming from our stimuli was 29.01 cd/m2 (SD = 1.19 cd/m2), a reasonably similar value to the 29.5 lux obtained from the illuminance measurement <span class="citation" data-cites="MathotVilotijevic2022">(<a href="#ref-MathotVilotijevic2022" role="doc-biblioref">Mathôt and Vilotijević 2022</a>)</span>.</p>
+</section>
+<section id="pupil-preprocessing-and-pupil-metrics" class="level2" data-number="2.6">
+<h2 data-number="2.6" class="anchored" data-anchor-id="pupil-preprocessing-and-pupil-metrics"><span class="header-section-number">2.6</span> Pupil preprocessing and pupil metrics</h2>
+<p>Pupil data was only collected during the recognition part of the experiment. Each participant underwent a 5-points calibration phase during the break in between the familiarization and the recognition part. Samples identified as blinks were set to NA. The blink window was extended by 75 ms on each side of the sample to remove partial blinks artifacts (i.e.&nbsp;lid drooping and reopening) that surrounds the “true” blink. Pupil samples that deviated more than 8 median absolute deviations from the median are set to NA. This preprocessing stage was run twice in sequence, where the second pass caught artefacts that were masked by larger ones in the first pass. Regarding NA samples, each trial was then evaluated separately for the baseline and the stimulus windows. A trial was discarded if more that 20% of the samples were NA in the baseline period (set to 200ms before the target onset) or in the stimulus period (from target onset to target offset; <span class="citation" data-cites="MathotVilotijevic2022">Mathôt and Vilotijević (<a href="#ref-MathotVilotijevic2022" role="doc-biblioref">2022</a>)</span>). The pupil data were then upsampled to a uniform time grid at 1000Hz sampling rate to ensure equally-spaces samples before interpolation and smoothing. Remaining NA samples were linearly interpolated. Finally, a zero-phase 4th-order Butterworth low-pass filter with a 6 Hz cutoff was applied to remove higher frequencies while keeping slower pupil responses. After interpolation, the pupil data was downsampled to 50 Hz to reduce the risk of autocorrelation in time-series analyses <span class="citation" data-cites="VanRij2019">(<a href="#ref-VanRij2019" role="doc-biblioref">Rij et al. 2019</a>)</span>.</p>
+<p>Pupil data was baseline corrected using a subtractive correction <span class="citation" data-cites="MathotVilotijevic2022">(<a href="#ref-MathotVilotijevic2022" role="doc-biblioref">Mathôt and Vilotijević 2022</a>)</span>, meaning that we subtracted the mean pupil size of the 200ms period before the stimulus onset from every pupil size sample during the stimulus presentation, for both left and right pupil size. The left and right eye signals were then averaged sample-by-sample into a single mean pupil trace. We discarded the pupil data from the last 100ms of the stimulus presentation (from 2400 to 2500ms) to ensure data quality.</p>
+<p>From the pupil traces, three different pupil metrics were extracted: the mean pupil size, the maximum pupil size and the rate of pupil change.</p>
+<p><em>Mean pupil size</em>: The mean pupil size reflected the average of the pupil size across the entire face presentation (from 0 to 2400ms) for each trial and each participant.</p>
+<p><em>Maximum pupil size</em>: We calculated the maximum pupil size deviation from baseline after stimulus onset. We isolated the minimum sample value in the baseline (200ms before stimulus onset) and the maximum sample value in the stimulus presentation (2400ms after stimulus onset) in each trial for each participant. Following previous studies <span class="citation" data-cites="BrocherGraf2016 KafkasMontaldi2015">(<a href="#ref-BrocherGraf2016" role="doc-biblioref">Brocher and Graf 2016</a>; <a href="#ref-KafkasMontaldi2015" role="doc-biblioref">Kafkas and Montaldi 2015</a>)</span>, we then average the value of the 3 preceding and 3 following samples from the two isolated sample values. For statistical analyses, we used the difference between the maximal pupil size during stimulus presentation and the minimal value during baseline.</p>
+<p><em>Rate of pupil change</em>: For each trial and participant, we calculated the first derivative of all the sample values from the stimulus onset or the stimulus offset (0-2400ms) in order to obtain the rate of pupil change. From this new time-series, we extracted the values of the samples 200ms before the behavioral response (response locked) and averaged them for each trial <span class="citation" data-cites="deGee2020">(<a href="#ref-deGee2020" role="doc-biblioref"><span class="nocase">Gee et al.</span> 2020</a>)</span>.</p>
+</section>
+<section id="evidence-accumulation-modeling" class="level2" data-number="2.7">
+<h2 data-number="2.7" class="anchored" data-anchor-id="evidence-accumulation-modeling"><span class="header-section-number">2.7</span> Evidence accumulation modeling</h2>
+<p>Model and priors specifications as well as the model estimation are identical to the ones described in <span class="citation" data-cites="fournier2026familiarity">Fournier et al. (<a href="#ref-fournier2026familiarity" role="doc-biblioref">2026</a>)</span>. Specifications of the priors are described in Supplementary Materials.</p>
+<section id="model-specifications" class="level3" data-number="2.7.1">
+<h3 data-number="2.7.1" class="anchored" data-anchor-id="model-specifications"><span class="header-section-number">2.7.1</span> Model specifications</h3>
+<p>A hierarchical LBA models was fit to the accuracy and response times of the face recognition task. The model specifications are outlined in our preregistration (<a href="#tbl-model-formula" class="quarto-xref">Table&nbsp;1</a>). The LBA framework assumes a separate evidence accumulator for each response alternative, with potentially different parameter values. Accordingly, one accumulator corresponded to the “Learned” response and the other to the “Novel” response. Threshold was allowed to vary by participants’ response (Learned/Novel) and mean drift rate varied as a function of both stimulus type (Learned/Novel) and weather the accumulator corresponded to the correct response for that stimulus (TRUE vs.&nbsp;FALSE). For example, when a Learned stimulus was presented, the Learned accumulator was designed as TRUE, whereas the Novel accumulator was designed as FALSE. The difference in drift rate between the TRUE and FALSE accumulators reflects the quality of information supporting a decision, with larger differences indicating stronger and more discriminative evidence accumulation <span class="citation" data-cites="lewandowskyComputationalModelingCognition2018">(<a href="#ref-lewandowskyComputationalModelingCognition2018" role="doc-biblioref">Lewandowsky and Oberauer 2018</a>)</span>. The standard deviation of the TRUE accumulator was allowed to vary according to accumulator match status, whereas the standard deviation of the FALSE accumulator was constrained to be constant to ensure model identifiability <span class="citation" data-cites="donkinGettingMoreAccuracy2009">(<a href="#ref-donkinGettingMoreAccuracy2009" role="doc-biblioref">Donkin et al. 2009</a>)</span>. In the preregistered model, a single start-point parameter (A), and single non-decision time parameter (t0) were estimated. Alternative model specifications that permitted variation in these parameters are reported in the Supplementary Materials.</p>
+<div class="cell">
+<div id="tbl-model-formula" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-model-formula-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: Formula specification for the pre-registered linear ballistic accumulator model.
+</figcaption>
+<div aria-describedby="tbl-model-formula-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_7hgzpwxnd9qnrk7n78ua = TinyTable.createTableFunctions("tinytable_7hgzpwxnd9qnrk7n78ua");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '6', j: 1 }, { i: '6', j: 2 }, { i: '6', j: 3 }, { i: '6', j: 4 }, { i: '6', j: 5 }, { i: '6', j: 6 } ], css_id: 'tinytable_css_afnvzsrxdrq6ror0cwif',}, 
+          { positions: [ { i: '0', j: 1 }, { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 }, { i: '0', j: 6 } ], css_id: 'tinytable_css_t656guqi7t0qionk95ym',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_7hgzpwxnd9qnrk7n78ua.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_7hgzpwxnd9qnrk7n78ua td.tinytable_css_afnvzsrxdrq6ror0cwif, #tinytable_7hgzpwxnd9qnrk7n78ua th.tinytable_css_afnvzsrxdrq6ror0cwif {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
+    #tinytable_7hgzpwxnd9qnrk7n78ua td.tinytable_css_t656guqi7t0qionk95ym, #tinytable_7hgzpwxnd9qnrk7n78ua th.tinytable_css_t656guqi7t0qionk95ym {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_7hgzpwxnd9qnrk7n78ua" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing="true">
+        
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1">Parameter</th>
+                <th scope="col" data-row="0" data-col="2">Label</th>
+                <th scope="col" data-row="0" data-col="3">Condition</th>
+                <th scope="col" data-row="0" data-col="4">Response</th>
+                <th scope="col" data-row="0" data-col="5">Accuracy</th>
+                <th scope="col" data-row="0" data-col="6">Fixed</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan="6">Condition = training condition (Learned vs. Novel); Response = key-press response (same vs. different); Accuracy = (true/correct vs false/incorrect); SD = standard deviation.</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">Start point</td>
+                  <td data-row="1" data-col="2">A</td>
+                  <td data-row="1" data-col="3">no</td>
+                  <td data-row="1" data-col="4">no</td>
+                  <td data-row="1" data-col="5">no</td>
+                  <td data-row="1" data-col="6">-</td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">Mean drift rate</td>
+                  <td data-row="2" data-col="2">v</td>
+                  <td data-row="2" data-col="3">yes</td>
+                  <td data-row="2" data-col="4">no</td>
+                  <td data-row="2" data-col="5">yes</td>
+                  <td data-row="2" data-col="6">-</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">SD drift rate</td>
+                  <td data-row="3" data-col="2">sd_v</td>
+                  <td data-row="3" data-col="3">no</td>
+                  <td data-row="3" data-col="4">no</td>
+                  <td data-row="3" data-col="5">yes</td>
+                  <td data-row="3" data-col="6">-</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">SD false drift rate</td>
+                  <td data-row="4" data-col="2">false.sd_v</td>
+                  <td data-row="4" data-col="3">-</td>
+                  <td data-row="4" data-col="4">-</td>
+                  <td data-row="4" data-col="5">-</td>
+                  <td data-row="4" data-col="6">1</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">Threshold</td>
+                  <td data-row="5" data-col="2">b</td>
+                  <td data-row="5" data-col="3">no</td>
+                  <td data-row="5" data-col="4">yes</td>
+                  <td data-row="5" data-col="5">no</td>
+                  <td data-row="5" data-col="6">-</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Non-decision time</td>
+                  <td data-row="6" data-col="2">t0</td>
+                  <td data-row="6" data-col="3">no</td>
+                  <td data-row="6" data-col="4">no</td>
+                  <td data-row="6" data-col="5">no</td>
+                  <td data-row="6" data-col="6">-</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+</div>
+</div>
+</figure>
+</div>
+</div>
+</section>
+<section id="model-estimation" class="level3" data-number="2.7.2">
+<h3 data-number="2.7.2" class="anchored" data-anchor-id="model-estimation"><span class="header-section-number">2.7.2</span> Model estimation</h3>
+<p>Bayesian model estimated was carried using the EMC2 R package <span class="citation" data-cites="EMC2">(<a href="#ref-EMC2" role="doc-biblioref">Stevenson et al. 2026</a>)</span>. Priors were chosen to be weakly-informative, meaning that they have little influence on the estimation (for more details regarding the priors of each model, see Supplementary Materials). Two sampling steps were used to estimate the parameters. First, a separate estimation of the fixed effects for each participant was conducted. Parameter estimations were then used as the starting point for the full hierarchical parameter estimation.</p>
+</section>
+<section id="model-fit" class="level3" data-number="2.7.3">
+<h3 data-number="2.7.3" class="anchored" data-anchor-id="model-fit"><span class="header-section-number">2.7.3</span> Model fit</h3>
+<p>To ensure that the fit of our model can capture most of the main trends in the data, graphical summaries of the posterior predictions were examined. Convergence plots and posterior predictive checks can be found in Supplementary Materials.</p>
+</section>
+</section>
+<section id="data-analysis" class="level2" data-number="2.8">
+<h2 data-number="2.8" class="anchored" data-anchor-id="data-analysis"><span class="header-section-number">2.8</span> Data analysis</h2>
+<section id="overview-of-the-general-analytical-strategy" class="level3" data-number="2.8.1">
+<h3 data-number="2.8.1" class="anchored" data-anchor-id="overview-of-the-general-analytical-strategy"><span class="header-section-number">2.8.1</span> Overview of the general analytical strategy</h3>
+<p>First, LBA parameters were estimated and distributions contrasts between conditions of interest were computed to ensure that we replicated the results found in <span class="citation" data-cites="fournier2026familiarity">Fournier et al. (<a href="#ref-fournier2026familiarity" role="doc-biblioref">2026</a>)</span>. Second we used a Bayesian multilevel mixed model to compare pupil metrics (mean pupil size, maximum pupil size and rate of pupil change) between stimulus conditions (Learned vs Novel) and accuracy conditions (correct trials vs incorrect trials). To provide a complementary picture of the difference in pupil data between the conditions of interest, a general additive mixed model (GAMM; <span class="citation" data-cites="VanRij2019">Rij et al. (<a href="#ref-VanRij2019" role="doc-biblioref">2019</a>)</span>) was also fitted to the pupil data. Regarding the associations between pupil size metrics and LBA parameters, we used correlations and data visualizations to characterize the zero-order relationships between parameters of interest (drift rate and threshold) from the LBA model with pupil size metrics. A “classical” correlation approach to generate point estimates of the correlation value and present those alongside scatter plots, as well as a Bayesian plausible value correlation approach to estimate the uncertainty in the estimated correlation values. Finally, as an exploratory analysis, we fitted a joint-model between pupil size The details of the analysis plan were preregistered (<a href="https://osf.io/abpdy/overview" class="uri">https://osf.io/abpdy/overview</a>) and more specific details are presented below.</p>
+</section>
+<section id="lba-parameters" class="level3" data-number="2.8.2">
+<h3 data-number="2.8.2" class="anchored" data-anchor-id="lba-parameters"><span class="header-section-number">2.8.2</span> LBA parameters</h3>
+<p>In order to make inference about the potential associations between LBA parameters and pupil size metrics, subject specific estimates and group estimates posterior distributions were computed. Group estimates were contrasted across conditions (learned vs novel) to establish that the basic experimental effect found in <span class="citation" data-cites="fournier2026familiarity">Fournier et al. (<a href="#ref-fournier2026familiarity" role="doc-biblioref">2026</a>)</span> is replicable at the group level. To summarize the distribution of parameters of interest, we report the median of the posterior distribution together with 95% quantile interval of the posterior distribution. Assessment of the associations between parameter estimates and pupil size metrics was pursued using subject specific estimates.</p>
+</section>
+<section id="pupil-metrics" class="level3" data-number="2.8.3">
+<h3 data-number="2.8.3" class="anchored" data-anchor-id="pupil-metrics"><span class="header-section-number">2.8.3</span> Pupil metrics</h3>
+<p>Pupil metrics (mean pupil size, maximum pupil size and rate of pupil change) were compared between response accuracy (correct vs.&nbsp;incorrect trials) and stimulus conditions (Learned vs.&nbsp;Novel). For each pupil metrics, a multilevel Bayesian model was fitted and the specificities of each model can be seen in <a href="#tbl-pupil-metrics-model-formula" class="quarto-xref">Table&nbsp;2</a>.</p>
+<div class="cell">
+<div id="tbl-pupil-metrics-model-formula" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-pupil-metrics-model-formula-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;2: Formula specification for the multilevel Bayesian mixed effects models of the pupil metrics
+</figcaption>
+<div aria-describedby="tbl-pupil-metrics-model-formula-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_c14lft0zr4k0sdhj3yrn = TinyTable.createTableFunctions("tinytable_c14lft0zr4k0sdhj3yrn");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '3', j: 1 }, { i: '3', j: 2 }, { i: '3', j: 3 } ], css_id: 'tinytable_css_xrjd5wwp0hb7tv3l5g5x',}, 
+          { positions: [ { i: '0', j: 1 }, { i: '0', j: 2 }, { i: '0', j: 3 } ], css_id: 'tinytable_css_7m5hnlgtmcyzzmrxiryd',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_c14lft0zr4k0sdhj3yrn.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_c14lft0zr4k0sdhj3yrn td.tinytable_css_xrjd5wwp0hb7tv3l5g5x, #tinytable_c14lft0zr4k0sdhj3yrn th.tinytable_css_xrjd5wwp0hb7tv3l5g5x {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
+    #tinytable_c14lft0zr4k0sdhj3yrn td.tinytable_css_7m5hnlgtmcyzzmrxiryd, #tinytable_c14lft0zr4k0sdhj3yrn th.tinytable_css_7m5hnlgtmcyzzmrxiryd {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%;  }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_c14lft0zr4k0sdhj3yrn" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing="true">
+        
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1">Pupil metrics</th>
+                <th scope="col" data-row="0" data-col="2">Condition</th>
+                <th scope="col" data-row="0" data-col="3">Formula</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan="3">familiarity = face familiarity (Learned vs. Novel); accuracy = response accuracy (correct vs. incorrect)</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">Mean pupil size</td>
+                  <td data-row="1" data-col="2">familiarity:accuracy</td>
+                  <td data-row="1" data-col="3">Mean pupil size:  0 + familiarity:accuracy + (1|participant)</td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">Maximum pupil size</td>
+                  <td data-row="2" data-col="2">familiarity:accuracy</td>
+                  <td data-row="2" data-col="3">Maximum pupil size: 0 + familiarity:accuracy + (1|participant)</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">Rate of pupil change</td>
+                  <td data-row="3" data-col="2">familiarity:accuracy</td>
+                  <td data-row="3" data-col="3">Rate of pupil change: 0 + familiarity:accuracy + (1|participant)</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+</div>
+</div>
+</figure>
+</div>
+</div>
+</section>
+<section id="general-additive-mixed-model-gamm" class="level3" data-number="2.8.4">
+<h3 data-number="2.8.4" class="anchored" data-anchor-id="general-additive-mixed-model-gamm"><span class="header-section-number">2.8.4</span> General additive mixed model (GAMM)</h3>
+</section>
+<section id="classical-correlational-analysis" class="level3" data-number="2.8.5">
+<h3 data-number="2.8.5" class="anchored" data-anchor-id="classical-correlational-analysis"><span class="header-section-number">2.8.5</span> Classical correlational analysis</h3>
+<p>To evaluate the associations between pupil size and LBA parameters, we calculated the median value of the subject-level posterior distribution of each of our parameter of interest and correlated this value with the three pupil metrics extracted from the pupil data time-series (mean pupil size, maximum pupil size and rate of pupil change) at the subject level. For the threshold parameter, we computed the median of the two threshold parameters (threshold for learned and novel responses). For the drift rate parameter, we computed the median of the median of the six drift rate parameters. Drift rate (TRUE) reflects the accumulation of evidence when the response was correct (accumulation of signal) whereas drift rate (FALSE) represents the accumulation of evidence when the response was incorrect (accumulation of noise). Drift rate (TRUE-FALSE) is the subtraction drift rate (TRUE) - drift rate (FALSE) and represent the signal to noise ratio provided by the stimulus. For each stimulus condition (learned and novel), the median drift rate (TRUE), drift rate (FALSE) and drift rate (TRUE-FALSE) was computed. All median values of these parameters posterior distribution were then correlated with the average of the pupil metrics for each corresponding conditions, for each subject. More specifically, Drift rate (TRUE) were correlated with pupil metrics for correct trials, Drift rate (FALSE) with pupil metrics for incorrect trials and finally Drift rate (TRUE-FALSE) with the difference in pupil metrics between correct and incorrect trials for each condition (ex: Drift rate (TRUE-FALSE) x (Mean pupil size (correct) - Mean pupil size (incorrect)). Regarding threshold we correlated pupil metrics in function of the response of the participant. The threshold learned parameter was correlates with pupil metrics when the response of the participant was “Learned”, and threshold novel parameter was correlates with pupil metrics when the response of the participant was “Novel”, without regard of the accuracy of the response.</p>
+</section>
+<section id="bayesian-plausible-value-correlational-analysis" class="level3" data-number="2.8.6">
+<h3 data-number="2.8.6" class="anchored" data-anchor-id="bayesian-plausible-value-correlational-analysis"><span class="header-section-number">2.8.6</span> Bayesian plausible value correlational analysis</h3>
+<p>In addition to the classical correlational analysis described above, we conducted a Bayesian plausible value correlation approach <span class="citation" data-cites="lyFlexibleEfficientHierarchical2017 matzkeBayesianInferenceCorrelations2017">(<a href="#ref-lyFlexibleEfficientHierarchical2017" role="doc-biblioref">Ly et al. 2017</a>; <a href="#ref-matzkeBayesianInferenceCorrelations2017" role="doc-biblioref">Matzke et al. 2017</a>)</span>. Instead of using point estimates (median value of each parameter’s posterior distribution), this approach allows the estimation of uncertainty in likely correlational values by correlating the parameter estimation from each sample (or “draw”) from the posterior distribution with the pupil metrics. A distribution of the plausible correlations between each parameter and the pupil metrics can then be obtained. These distributions can then be compared between stimuli conditions (Learned vs Novel). By summarising the posterior distribution of these correlation values, this approach naturally lends itself to estimates of the uncertainty of the estimated correlation values.</p>
+</section>
+<section id="joint-modelling" class="level3" data-number="2.8.7">
+<h3 data-number="2.8.7" class="anchored" data-anchor-id="joint-modelling"><span class="header-section-number">2.8.7</span> Joint modelling</h3>
+<p>As an exploratory analysis, we used the EMC2 R package to fit a hierarchical Bayesian model combining a Linear Ballistic Accumulator (LBA) model of response times and accuracy with a pupil component. In the LBA, drift rates varied by stimulus type (learned/novel) and accumulator match (match/mismatch), thresholds by response option, and start-point variability and non-decision time were estimated as single parameters, with the drift-rate variability of the mismatching accumulator fixed for identifiability. Mean baseline-corrected pupil size per trial was modeled with a Gaussian regression (via EMC2’s design_fmri function, used here as a generic GLM engine, without convolution) with one regressor per trial type (Learned_Correct, Learned_Incorrect, Novel_Correct, Novel_Incorrect). Behavioral and pupil parameters were estimated together, so that individual differences in both were drawn from a shared multivariate distribution. From the resulting subject-level posterior draws, we computed correlations between conditions of interest. In our case, we extracted the mean posterior draws for Drift rate Learned (TRUE-FALSE) and Novel (TRUE-FALSE) and correlated them with the posterior draws of the mean pupil size for the learned condition (Correct-Incorrect) and for the novel condition (Correct-Incorrect). The objective was to estimate if we could retrieve the correlations obtained in the point estimates correlations section as well as the ones obtained in the plausible values section. As mentioned, this analysis is exploratory and was intended as a proof of concept for a joint modelling pipeline of pupil and behavioral data. No inferences were made based on the correlations obtained trough the joint model.</p>
+</section>
+<section id="inferential-criteria" class="level3" data-number="2.8.8">
+<h3 data-number="2.8.8" class="anchored" data-anchor-id="inferential-criteria"><span class="header-section-number">2.8.8</span> Inferential criteria</h3>
+<p>To evaluate the different posterior distributions estimated from the data analysis, we used three complementary criteria: sign, size and precision <span class="citation" data-cites="cummingNewStatisticsWhy2014 kruschkeBayesianDataAnalysis2018 mcelreath2018statistical">(<a href="#ref-cummingNewStatisticsWhy2014" role="doc-biblioref">Cumming 2014</a>; <a href="#ref-kruschkeBayesianDataAnalysis2018" role="doc-biblioref">Kruschke and Liddell 2018</a>; <a href="#ref-mcelreath2018statistical" role="doc-biblioref">McElreath 2018</a>)</span>. To address the sign (or direction) of the effect, we reported if the median value is positive or negative. Second, we evaluated the size or magnitude of the posterior distribution by considering the size of the median value as well as the extent to which lower or upper bounds of the 95% quantile interval approach zero (no relationship). For example, if the 95% quantile interval excluded zero, we would have been reasonably confident in our inference of a non-zero effect. Furthermore, we used the width of the 95% quantile intervals as an indicator of estimation precision. Whereas narrow estimates indicate precise estimates, wider intervals indicate substantial uncertainty about the estimated parameter value, which may warrant a more cautious interpretation.</p>
+<p>Regarding plausible value correlations,</p>
+</section>
+</section>
+</section>
+<section id="results" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Results</h1>
+<section id="lba-parameters-1" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="lba-parameters-1"><span class="header-section-number">3.1</span> LBA parameters</h2>
+<p><em>Threshold</em>: Inspection of the posterior distributions shows that there is an effect of familiarity on the threshold parameter. The threshold parameter is higher for the Novel response compared to the Learned response.</p>
+<div class="cell" data-layout-nrow="2">
+<div id="fig-param" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-param-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-param" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-param-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-param-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-param-1.png" class="img-fluid figure-img" data-ref-parent="fig-param" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-param-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a) Left panel: Threshold by response / Right panel: Threshold (novel - learned) contrast
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-param" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-param-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-param-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-param-2.png" class="img-fluid figure-img" data-ref-parent="fig-param" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-param-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b) Left panel: Drift rate (TRUE - FALSE) by stimulus / Right panel: Drift rate (novel - learned) contrast
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-param-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: Threshold and drift rate estimates
+</figcaption>
+</figure>
+</div>
+</div>
+<p><em>Drift rate</em>: Inspection of the posterior distributions shows that there is a familiarity effect in drift rate difference. The quality of the evidence accumulation was greater for Novel faces compared to Learned faces.</p>
+<div class="cell">
+<div id="tbl-lba-params" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-lba-params-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;3: Posterior median and 95% quantile intervals for threshold and drift rate parameters.
+</figcaption>
+<div aria-describedby="tbl-lba-params-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_i1iyjdheu40mqxp9oidc = TinyTable.createTableFunctions("tinytable_i1iyjdheu40mqxp9oidc");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '6', j: 1 }, { i: '6', j: 2 }, { i: '6', j: 3 }, { i: '6', j: 4 } ], css_id: 'tinytable_css_2dv087r8uggzpovk937o',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '1', j: 4 }, { i: '2', j: 4 }, { i: '3', j: 4 }, { i: '4', j: 4 }, { i: '5', j: 4 } ], css_id: 'tinytable_css_6j38tg19tm3bppjvjvkf',}, 
+          { positions: [ { i: '0', j: 1 }, { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 } ], css_id: 'tinytable_css_y8fo1blt7zbqcvb43cve',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_i1iyjdheu40mqxp9oidc.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_i1iyjdheu40mqxp9oidc td.tinytable_css_2dv087r8uggzpovk937o, #tinytable_i1iyjdheu40mqxp9oidc th.tinytable_css_2dv087r8uggzpovk937o {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-size: 0.85em }
+    #tinytable_i1iyjdheu40mqxp9oidc td.tinytable_css_6j38tg19tm3bppjvjvkf, #tinytable_i1iyjdheu40mqxp9oidc th.tinytable_css_6j38tg19tm3bppjvjvkf { font-size: 0.85em }
+    #tinytable_i1iyjdheu40mqxp9oidc td.tinytable_css_y8fo1blt7zbqcvb43cve, #tinytable_i1iyjdheu40mqxp9oidc th.tinytable_css_y8fo1blt7zbqcvb43cve {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-size: 0.85em }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_i1iyjdheu40mqxp9oidc" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing="true">
+        
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1">Parameter</th>
+                <th scope="col" data-row="0" data-col="2">Condition</th>
+                <th scope="col" data-row="0" data-col="3">Median</th>
+                <th scope="col" data-row="0" data-col="4">95% QI</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan="4">QI = quantile interval.</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">Threshold</td>
+                  <td data-row="1" data-col="2">Novel</td>
+                  <td data-row="1" data-col="3">1.35</td>
+                  <td data-row="1" data-col="4">[1.302, 1.4]</td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">Threshold</td>
+                  <td data-row="2" data-col="2">Learned</td>
+                  <td data-row="2" data-col="3">1.23</td>
+                  <td data-row="2" data-col="4">[1.17, 1.29]</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">Threshold contrast</td>
+                  <td data-row="3" data-col="2">Novel - Learned</td>
+                  <td data-row="3" data-col="3">0.12</td>
+                  <td data-row="3" data-col="4">[0.073, 0.169]</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">Drift rate</td>
+                  <td data-row="4" data-col="2">Novel</td>
+                  <td data-row="4" data-col="3">1.75</td>
+                  <td data-row="4" data-col="4">[1.569, 1.94]</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">Drift rate</td>
+                  <td data-row="5" data-col="2">Learned</td>
+                  <td data-row="5" data-col="3">0.55</td>
+                  <td data-row="5" data-col="4">[0.378, 0.728]</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Drift rate contrast</td>
+                  <td data-row="6" data-col="2">Novel - Learned</td>
+                  <td data-row="6" data-col="3">1.2</td>
+                  <td data-row="6" data-col="4">[0.879, 1.522]</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+</div>
+</div>
+</figure>
+</div>
+</div>
+</section>
+<section id="pupil-metrics-1" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="pupil-metrics-1"><span class="header-section-number">3.2</span> Pupil metrics</h2>
+<p>To estimate if the stimulus condition (Learned vs Novel) and/or the response accuracy (Correct vs Incorrect) had any effect on the different pupil metrics we fitted three Bayesian multilevel mixed model and report the posterior distributions, as well as the contrasts between stimulus conditions, accuracy and their interaction.Posterior contrasts for each pupil metric are reported in <a href="#tbl-contrasts-pupil" class="quarto-xref">Table&nbsp;4</a>, and the estimated condition means are shown in <a href="#fig-pupil-metrics-plots" class="quarto-xref">Figure&nbsp;4</a>. All contrasts are expressed in standard deviation units, and evidence ratios and posterior probabilities refer to directional hypotheses (effect &gt; 0).</p>
+<p><em>Mean pupil size</em>: Mean pupil size was larger for learned than for novel faces (b = 0.23, 95% CrI [0.02, 0.44], Evid.Ratio = 68.36, Post.Prob = .986). There was little evidence for a difference between correct and incorrect responses (b = 0.08, 95% CrI [−0.13, 0.30], Evid.Ratio = 3.47, Post.Prob = .776). The interaction between condition and accuracy was positive (b = 0.85, 95% CrI [0.43, 1.28], Evid.Ratio &gt; 1000, Post.Prob &gt; .999): the difference between correct and incorrect responses was larger for learned than for novel faces.</p>
+<p><em>Peak pupil size</em>: Peak pupil size showed the same pattern. Peak size was larger for learned than for novel faces (b = 0.20, 95% CrI [0.03, 0.37], Evid.Ratio = 85.96, Post.Prob = .989), with little evidence for an effect of accuracy (b = 0.04, 95% CrI [−0.13, 0.21], Evid.Ratio = 2.11, Post.Prob = .678). The interaction was positive and was the largest effect across the three metrics (b = 0.96, 95% CrI [0.61, 1.30], Evid.Ratio &gt; 1000, Post.Prob &gt; .999).</p>
+<p><em>Pupil change rate</em>: For pupil change rate, the rate was higher for learned than for novel faces (b = 0.25, 95% CrI [0.01, 0.48], Evid.Ratio = 49.42, Post.Prob = .980). The rate was also higher for correct than for incorrect responses (b = 0.21, 95% CrI [−0.02, 0.45], Evid.Ratio = 24.48, Post.Prob = .961), although the credible interval included zero. As for the other metrics, the interaction was positive (b = 0.75, 95% CrI [0.27, 1.23], Evid.Ratio = 570.43, Post.Prob = .998).</p>
+<div id="fig-pupil-metrics-plots" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-pupil-metrics-plots-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-pupil-metrics-plots" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-pupil-metrics-plots-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-pupil-metrics-plots-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-pupil-metrics-plots-1.png" class="img-fluid figure-img" data-ref-parent="fig-pupil-metrics-plots" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-pupil-metrics-plots-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a) Mean pupil size (mm) by condition and accuracy
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-pupil-metrics-plots" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-pupil-metrics-plots-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-pupil-metrics-plots-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-pupil-metrics-plots-2.png" class="img-fluid figure-img" data-ref-parent="fig-pupil-metrics-plots" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-pupil-metrics-plots-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b) Peak pupil dilation (mm) by condition and accuracy
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-pupil-metrics-plots" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-pupil-metrics-plots-3" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-pupil-metrics-plots-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-pupil-metrics-plots-3.png" class="img-fluid figure-img" data-ref-parent="fig-pupil-metrics-plots" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-pupil-metrics-plots-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(c) Pupil rate change (mm/s) by condition and accuracy
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-pupil-metrics-plots-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Pupil metrics by condition and accuracy. Points denotate the means of the posterior distribtutions with and error bars the 66% and 95% credible intervals.
+</figcaption>
+</figure>
+</div>
+<div class="cell">
+<div id="tbl-contrasts-pupil" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-contrasts-pupil-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;4: Posterior contrasts for each pupil metric (SD units)
+</figcaption>
+<div aria-describedby="tbl-contrasts-pupil-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_b7xe8nqv1qtfvnnj5byt = TinyTable.createTableFunctions("tinytable_b7xe8nqv1qtfvnnj5byt");
+      // tinytable span after
+      window.addEventListener('load', function () { tableFns_b7xe8nqv1qtfvnnj5byt.spanCell(9, 1, 1, 5) })
+      window.addEventListener('load', function () { tableFns_b7xe8nqv1qtfvnnj5byt.spanCell(5, 1, 1, 5) })
+      window.addEventListener('load', function () { tableFns_b7xe8nqv1qtfvnnj5byt.spanCell(1, 1, 1, 5) })
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '12', j: 1 }, { i: '12', j: 2 }, { i: '12', j: 3 }, { i: '12', j: 4 }, { i: '12', j: 5 } ], css_id: 'tinytable_css_fp5a4j48tuaokeqc8pcq',}, 
+          { positions: [ { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '8', j: 1 }, { i: '10', j: 1 }, { i: '11', j: 1 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '8', j: 2 }, { i: '10', j: 2 }, { i: '11', j: 2 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '8', j: 3 }, { i: '10', j: 3 }, { i: '11', j: 3 }, { i: '2', j: 4 }, { i: '3', j: 4 }, { i: '4', j: 4 }, { i: '6', j: 4 }, { i: '7', j: 4 }, { i: '8', j: 4 }, { i: '10', j: 4 }, { i: '11', j: 4 }, { i: '2', j: 5 }, { i: '3', j: 5 }, { i: '4', j: 5 }, { i: '6', j: 5 }, { i: '7', j: 5 }, { i: '8', j: 5 }, { i: '10', j: 5 }, { i: '11', j: 5 } ], css_id: 'tinytable_css_9sqniqhhwupwkp89anym',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '5', j: 1 }, { i: '9', j: 1 }, { i: '1', j: 2 }, { i: '5', j: 2 }, { i: '9', j: 2 }, { i: '1', j: 3 }, { i: '5', j: 3 }, { i: '9', j: 3 }, { i: '1', j: 4 }, { i: '5', j: 4 }, { i: '9', j: 4 }, { i: '1', j: 5 }, { i: '5', j: 5 }, { i: '9', j: 5 } ], css_id: 'tinytable_css_tdjzu9qz7qur2ng3x61e',}, 
+          { positions: [ { i: '0', j: 1 }, { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 } ], css_id: 'tinytable_css_dnv4c73nw5ooun0mtjtb',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_b7xe8nqv1qtfvnnj5byt.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_b7xe8nqv1qtfvnnj5byt td.tinytable_css_fp5a4j48tuaokeqc8pcq, #tinytable_b7xe8nqv1qtfvnnj5byt th.tinytable_css_fp5a4j48tuaokeqc8pcq {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-size: 0.7em }
+    #tinytable_b7xe8nqv1qtfvnnj5byt td.tinytable_css_9sqniqhhwupwkp89anym, #tinytable_b7xe8nqv1qtfvnnj5byt th.tinytable_css_9sqniqhhwupwkp89anym { font-size: 0.7em }
+    #tinytable_b7xe8nqv1qtfvnnj5byt td.tinytable_css_tdjzu9qz7qur2ng3x61e, #tinytable_b7xe8nqv1qtfvnnj5byt th.tinytable_css_tdjzu9qz7qur2ng3x61e { font-style: italic; font-size: 0.8em }
+    #tinytable_b7xe8nqv1qtfvnnj5byt td.tinytable_css_dnv4c73nw5ooun0mtjtb, #tinytable_b7xe8nqv1qtfvnnj5byt th.tinytable_css_dnv4c73nw5ooun0mtjtb {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-weight: bold; font-size: 0.8em }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_b7xe8nqv1qtfvnnj5byt" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing="true">
+        
+        <thead>
+              <tr>
+                <th scope="col" data-row="0" data-col="1">Contrast</th>
+                <th scope="col" data-row="0" data-col="2">Estimate (SD units)</th>
+                <th scope="col" data-row="0" data-col="3">95% CrI</th>
+                <th scope="col" data-row="0" data-col="4">Evid.Ratio</th>
+                <th scope="col" data-row="0" data-col="5">Post.Prob</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan="5">CrI = credible interval; Evid.Ratio = P(effect &gt; 0) / P(effect &lt; 0); Post.Prob = P(effect &gt; 0).</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">Mean pupil size</td>
+                  <td data-row="1" data-col="2">Mean pupil size</td>
+                  <td data-row="1" data-col="3">Mean pupil size</td>
+                  <td data-row="1" data-col="4">Mean pupil size</td>
+                  <td data-row="1" data-col="5">Mean pupil size</td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">Familiarity (Learned - Novel)</td>
+                  <td data-row="2" data-col="2">0.23</td>
+                  <td data-row="2" data-col="3">[0.02, 0.44]</td>
+                  <td data-row="2" data-col="4">68.36</td>
+                  <td data-row="2" data-col="5">0.986</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">Accuracy (Correct - Incorrect)</td>
+                  <td data-row="3" data-col="2">0.08</td>
+                  <td data-row="3" data-col="3">[-0.13, 0.30]</td>
+                  <td data-row="3" data-col="4">3.47</td>
+                  <td data-row="3" data-col="5">0.776</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">Interaction</td>
+                  <td data-row="4" data-col="2">0.85</td>
+                  <td data-row="4" data-col="3">[0.43, 1.28]</td>
+                  <td data-row="4" data-col="4">11999.00</td>
+                  <td data-row="4" data-col="5">1.000</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">Peak pupil size</td>
+                  <td data-row="5" data-col="2">Peak pupil size</td>
+                  <td data-row="5" data-col="3">Peak pupil size</td>
+                  <td data-row="5" data-col="4">Peak pupil size</td>
+                  <td data-row="5" data-col="5">Peak pupil size</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Familiarity (Learned - Novel)</td>
+                  <td data-row="6" data-col="2">0.20</td>
+                  <td data-row="6" data-col="3">[0.03, 0.37]</td>
+                  <td data-row="6" data-col="4">85.96</td>
+                  <td data-row="6" data-col="5">0.989</td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">Accuracy (Correct - Incorrect)</td>
+                  <td data-row="7" data-col="2">0.04</td>
+                  <td data-row="7" data-col="3">[-0.13, 0.21]</td>
+                  <td data-row="7" data-col="4">2.11</td>
+                  <td data-row="7" data-col="5">0.678</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">Interaction</td>
+                  <td data-row="8" data-col="2">0.96</td>
+                  <td data-row="8" data-col="3">[0.61, 1.30]</td>
+                  <td data-row="8" data-col="4">&gt; 12000</td>
+                  <td data-row="8" data-col="5">1.000</td>
+                </tr>
+                <tr>
+                  <td data-row="9" data-col="1">Pupil change rate</td>
+                  <td data-row="9" data-col="2">Pupil change rate</td>
+                  <td data-row="9" data-col="3">Pupil change rate</td>
+                  <td data-row="9" data-col="4">Pupil change rate</td>
+                  <td data-row="9" data-col="5">Pupil change rate</td>
+                </tr>
+                <tr>
+                  <td data-row="10" data-col="1">Familiarity (Learned - Novel)</td>
+                  <td data-row="10" data-col="2">0.25</td>
+                  <td data-row="10" data-col="3">[0.01, 0.48]</td>
+                  <td data-row="10" data-col="4">49.42</td>
+                  <td data-row="10" data-col="5">0.980</td>
+                </tr>
+                <tr>
+                  <td data-row="11" data-col="1">Accuracy (Correct - Incorrect)</td>
+                  <td data-row="11" data-col="2">0.21</td>
+                  <td data-row="11" data-col="3">[-0.02, 0.45]</td>
+                  <td data-row="11" data-col="4">24.48</td>
+                  <td data-row="11" data-col="5">0.961</td>
+                </tr>
+                <tr>
+                  <td data-row="12" data-col="1">Interaction</td>
+                  <td data-row="12" data-col="2">0.75</td>
+                  <td data-row="12" data-col="3">[0.27, 1.23]</td>
+                  <td data-row="12" data-col="4">570.43</td>
+                  <td data-row="12" data-col="5">0.998</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+</div>
+</div>
+</figure>
+</div>
+</div>
+</section>
+<section id="general-additive-mixed-model-gamm-1" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="general-additive-mixed-model-gamm-1"><span class="header-section-number">3.3</span> General additive mixed model (GAMM)</h2>
+<p>Ask Rich for this: Which plot do we use for the GAMM model</p>
+</section>
+<section id="point-estimates-correlations" class="level2" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="point-estimates-correlations"><span class="header-section-number">3.4</span> Point estimates correlations</h2>
+<p>Here describe.</p>
+<p>Here describe results</p>
+<div id="fig-corr-point-estimates" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-corr-point-estimates-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-corr-point-estimates" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-corr-point-estimates-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-corr-point-estimates-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-corr-point-estimates-1.png" class="img-fluid figure-img" data-ref-parent="fig-corr-point-estimates" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-corr-point-estimates-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a) Point estimates correlations between threshold parameter (Learned and Novel) and pupil metrics (Mean pupil size, Maximum Pupil size and rate of pupil change)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-corr-point-estimates" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-corr-point-estimates-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-corr-point-estimates-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-corr-point-estimates-2.png" class="img-fluid figure-img" data-ref-parent="fig-corr-point-estimates" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-corr-point-estimates-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b) Point estimates correlations between drift rate parameters (TRUE and FALSE for learned and novel faces) and pupil metrics (Mean pupil size, Maximum Pupil size and rate of pupil change)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-corr-point-estimates" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-corr-point-estimates-3" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-corr-point-estimates-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-corr-point-estimates-3.png" class="img-fluid figure-img" data-ref-parent="fig-corr-point-estimates" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-corr-point-estimates-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(c) Point estimates correlations between drift rate parameters (TRUE-FALSE for learned and novel faces) and pupil metrics (Mean pupil size, Maximum Pupil size and rate of pupil change)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-corr-point-estimates-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: Point estimates correlations between LBA parameters and pupil metrics
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="bayesian-plausible-value-correlational-analysis-1" class="level2" data-number="3.5">
+<h2 data-number="3.5" class="anchored" data-anchor-id="bayesian-plausible-value-correlational-analysis-1"><span class="header-section-number">3.5</span> Bayesian plausible value correlational analysis</h2>
+<p>To estimate the uncertainty linked to the relationships between LBA estimated parameters and the different pupil metrics, we used a Bayesian plausible value correlational analysis. Like described above (see Methods), instead of using a single point estimate to assess the strength of the relationship between our variables of interest, the posterior distribution of the LBA parameters allows us to use the entire sampling distribution to do it. We calculated the Person’s <em>r</em> between each sample value from our posterior distribution for each parameter of each subject and their subject-level pupil metrics. The posterior distributions of parameters plausible correlation values are shown in <a href="#fig-plausible-corr" class="quarto-xref">Figure&nbsp;6</a>. For both threshold and drift rate, we evaluated the 95% CI of the distributions. If the 95% CI of the distribution does not include 0, we would be confident in the existence of a relationship between these parameters and the associated pupil size metrics <a href="#tbl-plausible-cor" class="quarto-xref">Table&nbsp;5</a> provides a summary of these distributions.</p>
+<p><em>Threshold:</em> For the response threshold, the only credible association involved the rate of pupil change. Participants with higher thresholds for “learned” responses showed a lower rate of pupil change on trials where they responded “learned” (median r = −0.20, 95% QI [−0.34, −0.05]). Pupil mean (r = −0.09, 95% QI [−0.23, 0.05]) and peak pupil size (r = 0.02, 95% QI [−0.13, 0.16]) on these trials were not credibly related to the learned-response threshold. For “novel” responses, none of the pupil metrics were credibly associated with the threshold: the 95% QIs included zero for pupil mean (r = −0.03, [−0.23, 0.16]), peak (r = 0.03, [−0.17, 0.22]), and rate of change (r = 0.06, [−0.13, 0.22]). Taken together, the threshold–pupil relationship was confined to learned responses and to the dynamics of the pupil response, not its overall size.</p>
+<p><em>Drift rate:</em> The difference in drift rate between correct and incorrect accumulators, an index of how well evidence discriminates the correct response, was related to the corresponding correct − incorrect difference in pupil metrics. The direction of this relationship depended on stimulus familiarity. For learned faces, participants with a larger drift rate advantage for the correct response showed a larger correct − incorrect difference in mean pupil size (r = 0.20, 95% QI [0.01, 0.37]), and a smaller correct − incorrect difference in the rate of pupil change (r = −0.24, 95% QI [−0.41, −0.06]). The association with peak pupil size was in the same direction as for the mean but not credible (r = 0.15, 95% QI [−0.05, 0.34]). For novel faces, the pattern reversed. A larger drift rate advantage was associated with a smaller correct − incorrect difference in both mean pupil size (r = −0.17, 95% QI [−0.32, −0.01]) and peak pupil size (r = −0.20, 95% QI [−0.35, −0.04]). The rate of pupil change was not credibly related (r = −0.09, 95% QI [−0.24, 0.08]). Thus, better evidence discrimination went with relatively larger pupil responses on correct trials for learned faces, but relatively smaller ones for novel faces.</p>
+<div id="fig-plausible-corr" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-plausible-corr-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-plausible-corr" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-plausible-corr-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-plausible-corr-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-plausible-corr-1.png" class="img-fluid figure-img" data-ref-parent="fig-plausible-corr" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-plausible-corr-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a) Plausible value correlations between threshold parameter (Learned and Novel) and pupil metrics (Mean pupil size, Maximum Pupil size and rate of pupil change)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-plausible-corr" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-plausible-corr-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-plausible-corr-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-plausible-corr-2.png" class="img-fluid figure-img" data-ref-parent="fig-plausible-corr" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-plausible-corr-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b) Plausible value correlations between drift rate parameters (TRUE and FALSE for learned and novel faces) and pupil metrics (Mean pupil size, Maximum Pupil size and rate of pupil change)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-plausible-corr" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-plausible-corr-3" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-plausible-corr-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-plausible-corr-3.png" class="img-fluid figure-img" data-ref-parent="fig-plausible-corr" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-plausible-corr-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(c) Plausible value correlations between drift rate parameters (TRUE-FALSE for learned and novel faces) and pupil metrics (Mean pupil size, Maximum Pupil size and rate of pupil change)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-plausible-corr-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Plausible values correlations between LBA parameters and pupil metrics. Points denote the median of the posterior distribution and error bars represent the 66% and 95% quantile intervals.
+</figcaption>
+</figure>
+</div>
+<div class="cell" data-tbl-height="10" data-tbl-width="15">
+<div id="tbl-plausible-cor" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-tbl-width="15" data-tbl-height="10">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-plausible-cor-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;5: Median r and 95% quantile intervals of the plausible value correlations between LBA parameters and pupil metrics.
+</figcaption>
+<div aria-describedby="tbl-plausible-cor-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<script src="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.js"></script>
+
+    <script>
+      // Create table-specific functions using external factory
+      const tableFns_dmziutr3llg6dsaeivgd = TinyTable.createTableFunctions("tinytable_dmziutr3llg6dsaeivgd");
+      // tinytable span after
+      window.addEventListener('load', function () {
+          var cellsToStyle = [
+            // tinytable style arrays after
+          { positions: [ { i: '-1', j: 9 } ], css_id: 'tinytable_css_xbmnl9vzrp96i2nh47ng',}, 
+          { positions: [ { i: '-1', j: 5 }, { i: '-1', j: 7 } ], css_id: 'tinytable_css_anvtltt5lpfcmpoqdbye',}, 
+          { positions: [ { i: '8', j: 4 }, { i: '8', j: 5 }, { i: '8', j: 6 }, { i: '8', j: 7 } ], css_id: 'tinytable_css_0vxz14vqo5yqqzs04p1l',}, 
+          { positions: [ { i: '7', j: 4 }, { i: '7', j: 5 }, { i: '7', j: 6 }, { i: '7', j: 7 }, { i: '1', j: 8 }, { i: '3', j: 8 }, { i: '5', j: 8 }, { i: '7', j: 8 }, { i: '1', j: 9 }, { i: '3', j: 9 }, { i: '5', j: 9 }, { i: '7', j: 9 } ], css_id: 'tinytable_css_l2o9pnmzwhzljqv8jo7l',}, 
+          { positions: [ { i: '5', j: 4 }, { i: '5', j: 5 }, { i: '6', j: 6 }, { i: '6', j: 7 } ], css_id: 'tinytable_css_9o0iun5ctq40kfb85oi0',}, 
+          { positions: [ { i: '-1', j: 4 }, { i: '-1', j: 6 }, { i: '-1', j: 8 } ], css_id: 'tinytable_css_eipqgky4gbtnizwoclem',}, 
+          { positions: [ { i: '8', j: 1 }, { i: '8', j: 2 }, { i: '8', j: 3 }, { i: '8', j: 8 }, { i: '8', j: 9 } ], css_id: 'tinytable_css_gjoxbmg6lrdvkuatrdaq',}, 
+          { positions: [ { i: '1', j: 1 }, { i: '2', j: 1 }, { i: '3', j: 1 }, { i: '4', j: 1 }, { i: '5', j: 1 }, { i: '6', j: 1 }, { i: '7', j: 1 }, { i: '1', j: 2 }, { i: '2', j: 2 }, { i: '3', j: 2 }, { i: '4', j: 2 }, { i: '5', j: 2 }, { i: '6', j: 2 }, { i: '7', j: 2 }, { i: '1', j: 3 }, { i: '2', j: 3 }, { i: '3', j: 3 }, { i: '4', j: 3 }, { i: '5', j: 3 }, { i: '6', j: 3 }, { i: '7', j: 3 }, { i: '1', j: 4 }, { i: '2', j: 4 }, { i: '3', j: 4 }, { i: '4', j: 4 }, { i: '6', j: 4 }, { i: '1', j: 5 }, { i: '2', j: 5 }, { i: '3', j: 5 }, { i: '4', j: 5 }, { i: '6', j: 5 }, { i: '1', j: 6 }, { i: '2', j: 6 }, { i: '3', j: 6 }, { i: '4', j: 6 }, { i: '5', j: 6 }, { i: '1', j: 7 }, { i: '2', j: 7 }, { i: '3', j: 7 }, { i: '4', j: 7 }, { i: '5', j: 7 }, { i: '2', j: 8 }, { i: '4', j: 8 }, { i: '6', j: 8 }, { i: '2', j: 9 }, { i: '4', j: 9 }, { i: '6', j: 9 } ], css_id: 'tinytable_css_bzz7df95uic76rhv63kv',}, 
+          { positions: [ { i: '0', j: 1 }, { i: '0', j: 2 }, { i: '0', j: 3 }, { i: '0', j: 4 }, { i: '0', j: 5 }, { i: '0', j: 6 }, { i: '0', j: 7 }, { i: '0', j: 8 }, { i: '0', j: 9 } ], css_id: 'tinytable_css_xvzoi0hguspskw2z5kw9',}, 
+          { positions: [ { i: '-1', j: 1 }, { i: '-1', j: 2 }, { i: '-1', j: 3 } ], css_id: 'tinytable_css_izum3s1ii9aw361bl3y1',}, 
+          ];
+
+          // Loop over the arrays to style the cells
+          cellsToStyle.forEach(function (group) {
+              group.positions.forEach(function (cell) {
+                  tableFns_dmziutr3llg6dsaeivgd.styleCell(cell.i, cell.j, group.css_id);
+              });
+          });
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vincentarelbundock/tinytable@main/inst/tinytable.css">
+    <style>
+    /* tinytable css entries after */
+    #tinytable_dmziutr3llg6dsaeivgd td.tinytable_css_xbmnl9vzrp96i2nh47ng, #tinytable_dmziutr3llg6dsaeivgd th.tinytable_css_xbmnl9vzrp96i2nh47ng {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.03em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-weight: bold; text-align: center; font-size: 0.8em }
+    #tinytable_dmziutr3llg6dsaeivgd td.tinytable_css_anvtltt5lpfcmpoqdbye, #tinytable_dmziutr3llg6dsaeivgd th.tinytable_css_anvtltt5lpfcmpoqdbye {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.03em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 3%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-weight: bold; text-align: center; font-size: 0.8em }
+    #tinytable_dmziutr3llg6dsaeivgd td.tinytable_css_0vxz14vqo5yqqzs04p1l, #tinytable_dmziutr3llg6dsaeivgd th.tinytable_css_0vxz14vqo5yqqzs04p1l {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-size: 0.7em; color: #B2182B }
+    #tinytable_dmziutr3llg6dsaeivgd td.tinytable_css_l2o9pnmzwhzljqv8jo7l, #tinytable_dmziutr3llg6dsaeivgd th.tinytable_css_l2o9pnmzwhzljqv8jo7l { font-size: 0.7em; color: #B2182B }
+    #tinytable_dmziutr3llg6dsaeivgd td.tinytable_css_9o0iun5ctq40kfb85oi0, #tinytable_dmziutr3llg6dsaeivgd th.tinytable_css_9o0iun5ctq40kfb85oi0 { font-size: 0.7em; color: #2166AC }
+    #tinytable_dmziutr3llg6dsaeivgd td.tinytable_css_eipqgky4gbtnizwoclem, #tinytable_dmziutr3llg6dsaeivgd th.tinytable_css_eipqgky4gbtnizwoclem {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.03em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 3%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-weight: bold; text-align: center; font-size: 0.8em }
+    #tinytable_dmziutr3llg6dsaeivgd td.tinytable_css_gjoxbmg6lrdvkuatrdaq, #tinytable_dmziutr3llg6dsaeivgd th.tinytable_css_gjoxbmg6lrdvkuatrdaq {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.08em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-size: 0.7em }
+    #tinytable_dmziutr3llg6dsaeivgd td.tinytable_css_bzz7df95uic76rhv63kv, #tinytable_dmziutr3llg6dsaeivgd th.tinytable_css_bzz7df95uic76rhv63kv { font-size: 0.7em }
+    #tinytable_dmziutr3llg6dsaeivgd td.tinytable_css_xvzoi0hguspskw2z5kw9, #tinytable_dmziutr3llg6dsaeivgd th.tinytable_css_xvzoi0hguspskw2z5kw9 {  position: relative; --border-bottom: 1; --border-left: 0; --border-right: 0; --border-top: 0; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.05em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.1em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-weight: bold; font-size: 0.8em }
+    #tinytable_dmziutr3llg6dsaeivgd td.tinytable_css_izum3s1ii9aw361bl3y1, #tinytable_dmziutr3llg6dsaeivgd th.tinytable_css_izum3s1ii9aw361bl3y1 {  position: relative; --border-bottom: 0; --border-left: 0; --border-right: 0; --border-top: 1; --line-color-bottom: var(--tt-line-color); --line-color-left: var(--tt-line-color); --line-color-right: var(--tt-line-color); --line-color-top: var(--tt-line-color); --line-width-bottom: 0.1em; --line-width-left: 0.1em; --line-width-right: 0.1em; --line-width-top: 0.08em; --line-type-bottom: solid; --line-type-left: solid; --line-type-right: solid; --line-type-top: solid; --trim-bottom-left: 0%; --trim-bottom-right: 0%; --trim-left-bottom: 0%; --trim-left-top: 0%; --trim-right-bottom: 0%; --trim-right-top: 0%; --trim-top-left: 0%; --trim-top-right: 0%; ; font-weight: bold; text-align: center; font-size: 0.8em }
+    </style>
+    <div class="container">
+      <table class="tinytable" id="tinytable_dmziutr3llg6dsaeivgd" style="width: auto; margin-left: auto; margin-right: auto;" data-quarto-disable-processing="true">
+        
+        <thead>
+<tr>
+<th scope="col" align="center" colspan="1" data-row="-1" data-col="1"> </th>
+<th scope="col" align="center" colspan="1" data-row="-1" data-col="2"> </th>
+<th scope="col" align="center" colspan="1" data-row="-1" data-col="3"> </th>
+<th scope="col" align="center" colspan="2" data-row="-1" data-col="4">Pupil mean</th>
+<th scope="col" align="center" colspan="2" data-row="-1" data-col="6">Pupil max</th>
+<th scope="col" align="center" colspan="2" data-row="-1" data-col="8">Pupil change rate</th>
+</tr>
+              <tr>
+                <th scope="col" data-row="0" data-col="1">Parameter</th>
+                <th scope="col" data-row="0" data-col="2">Condition</th>
+                <th scope="col" data-row="0" data-col="3">Accuracy</th>
+                <th scope="col" data-row="0" data-col="4">Median r</th>
+                <th scope="col" data-row="0" data-col="5">95% QI</th>
+                <th scope="col" data-row="0" data-col="6">Median r</th>
+                <th scope="col" data-row="0" data-col="7">95% QI</th>
+                <th scope="col" data-row="0" data-col="8">Median r</th>
+                <th scope="col" data-row="0" data-col="9">95% QI</th>
+              </tr>
+        </thead>
+        <tfoot><tr><td colspan="9">Note. Blue = 95% QI entirely above zero; red = 95% QI entirely below zero.</td></tr></tfoot>
+        <tbody>
+                <tr>
+                  <td data-row="1" data-col="1">Threshold</td>
+                  <td data-row="1" data-col="2">Learned</td>
+                  <td data-row="1" data-col="3">-</td>
+                  <td data-row="1" data-col="4">-0.09</td>
+                  <td data-row="1" data-col="5">[-0.23, 0.05]</td>
+                  <td data-row="1" data-col="6">0.02</td>
+                  <td data-row="1" data-col="7">[-0.13, 0.16]</td>
+                  <td data-row="1" data-col="8">-0.20</td>
+                  <td data-row="1" data-col="9">[-0.34, -0.05]</td>
+                </tr>
+                <tr>
+                  <td data-row="2" data-col="1">Threshold</td>
+                  <td data-row="2" data-col="2">Novel</td>
+                  <td data-row="2" data-col="3">-</td>
+                  <td data-row="2" data-col="4">-0.03</td>
+                  <td data-row="2" data-col="5">[-0.23, 0.16]</td>
+                  <td data-row="2" data-col="6">0.03</td>
+                  <td data-row="2" data-col="7">[-0.17, 0.22]</td>
+                  <td data-row="2" data-col="8">0.06</td>
+                  <td data-row="2" data-col="9">[-0.13, 0.22]</td>
+                </tr>
+                <tr>
+                  <td data-row="3" data-col="1">Drift</td>
+                  <td data-row="3" data-col="2">Learned</td>
+                  <td data-row="3" data-col="3">TRUE</td>
+                  <td data-row="3" data-col="4">0.01</td>
+                  <td data-row="3" data-col="5">[-0.20, 0.21]</td>
+                  <td data-row="3" data-col="6">-0.02</td>
+                  <td data-row="3" data-col="7">[-0.23, 0.19]</td>
+                  <td data-row="3" data-col="8">-0.28</td>
+                  <td data-row="3" data-col="9">[-0.46, -0.07]</td>
+                </tr>
+                <tr>
+                  <td data-row="4" data-col="1">Drift</td>
+                  <td data-row="4" data-col="2">Learned</td>
+                  <td data-row="4" data-col="3">FALSE</td>
+                  <td data-row="4" data-col="4">0.04</td>
+                  <td data-row="4" data-col="5">[-0.25, 0.30]</td>
+                  <td data-row="4" data-col="6">0.01</td>
+                  <td data-row="4" data-col="7">[-0.29, 0.30]</td>
+                  <td data-row="4" data-col="8">0.01</td>
+                  <td data-row="4" data-col="9">[-0.25, 0.25]</td>
+                </tr>
+                <tr>
+                  <td data-row="5" data-col="1">Drift</td>
+                  <td data-row="5" data-col="2">Learned</td>
+                  <td data-row="5" data-col="3">TRUE-FALSE</td>
+                  <td data-row="5" data-col="4">0.20</td>
+                  <td data-row="5" data-col="5">[0.01, 0.37]</td>
+                  <td data-row="5" data-col="6">0.15</td>
+                  <td data-row="5" data-col="7">[-0.05, 0.34]</td>
+                  <td data-row="5" data-col="8">-0.24</td>
+                  <td data-row="5" data-col="9">[-0.41, -0.06]</td>
+                </tr>
+                <tr>
+                  <td data-row="6" data-col="1">Drift</td>
+                  <td data-row="6" data-col="2">Novel</td>
+                  <td data-row="6" data-col="3">TRUE</td>
+                  <td data-row="6" data-col="4">0.15</td>
+                  <td data-row="6" data-col="5">[-0.09, 0.36]</td>
+                  <td data-row="6" data-col="6">0.25</td>
+                  <td data-row="6" data-col="7">[0.02, 0.46]</td>
+                  <td data-row="6" data-col="8">0.15</td>
+                  <td data-row="6" data-col="9">[-0.10, 0.36]</td>
+                </tr>
+                <tr>
+                  <td data-row="7" data-col="1">Drift</td>
+                  <td data-row="7" data-col="2">Novel</td>
+                  <td data-row="7" data-col="3">FALSE</td>
+                  <td data-row="7" data-col="4">-0.22</td>
+                  <td data-row="7" data-col="5">[-0.38, -0.06]</td>
+                  <td data-row="7" data-col="6">-0.28</td>
+                  <td data-row="7" data-col="7">[-0.43, -0.12]</td>
+                  <td data-row="7" data-col="8">-0.21</td>
+                  <td data-row="7" data-col="9">[-0.37, -0.04]</td>
+                </tr>
+                <tr>
+                  <td data-row="8" data-col="1">Drift</td>
+                  <td data-row="8" data-col="2">Novel</td>
+                  <td data-row="8" data-col="3">TRUE-FALSE</td>
+                  <td data-row="8" data-col="4">-0.17</td>
+                  <td data-row="8" data-col="5">[-0.32, -0.01]</td>
+                  <td data-row="8" data-col="6">-0.20</td>
+                  <td data-row="8" data-col="7">[-0.35, -0.04]</td>
+                  <td data-row="8" data-col="8">-0.09</td>
+                  <td data-row="8" data-col="9">[-0.24, 0.08]</td>
+                </tr>
+        </tbody>
+      </table>
+    </div>
+<!-- hack to avoid NA insertion in last line -->
+</div>
+</div>
+</figure>
+</div>
+</div>
+</section>
+<section id="joint-model" class="level2" data-number="3.6">
+<h2 data-number="3.6" class="anchored" data-anchor-id="joint-model"><span class="header-section-number">3.6</span> Joint model</h2>
+<p>Here are shown the blablab</p>
+<p><a href="#fig-joint-model" class="quarto-xref">Figure&nbsp;7</a></p>
+<div class="cell" data-layout-row="2">
+<div id="fig-joint-model" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-layout-row="2">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-joint-model-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<div id="fig-joint-model-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-joint-model-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-joint-model-1.png" class="img-fluid figure-img" data-ref-parent="fig-joint-model" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-joint-model-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a) Point estimates correlations between posterior mean pupil size (Correct-Incorrect) and drift rate (TRUE-FALSE)
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output-display">
+<div id="fig-joint-model-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-joint-model-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="manuscript_files/figure-html/fig-joint-model-2.png" class="img-fluid figure-img" data-ref-parent="fig-joint-model" width="960">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-joint-model-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b) Plausible value correlations between posterior mean pupil size (Correct-Incorrect) and drift rate (TRUE-FALSE). Points denote the median of the distribution and error bars the 66% and 95% credible intervals.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-joint-model-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;7: Correlations extracted from the joint distribution of mean pupil size and LBA data.
+</figcaption>
+</figure>
+</div>
+</div>
+</section>
+</section>
+<section id="discussion" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Discussion</h1>
+<p>Paragraph 1:</p>
+<p>Paragraph 2: Paragraph 3: Paragraph 4: Paragraph 5: Paragraph 6:</p>
+<div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-Binda2014" class="csl-entry" role="listitem">
+Binda, Paola, Maria Pereverzeva, and Scott O. Murray. 2014. <span>“Pupil Size Reflects the Focus of Feature-Based Attention.”</span> <em>Journal of Neurophysiology</em> 112 (12): 3046–52. <a href="https://doi.org/10.1152/jn.00502.2014">https://doi.org/10.1152/jn.00502.2014</a>.
+</div>
+<div id="ref-Bradley2008" class="csl-entry" role="listitem">
+Bradley, Margaret M., Laura Miccoli, Miguel A. Escrig, and Peter J. Lang. 2008. <span>“The Pupil as a Measure of Emotional Arousal and Autonomic Activation.”</span> <em>Psychophysiology</em> 45 (4): 602–7. <a href="https://doi.org/10.1111/j.1469-8986.2008.00654.x">https://doi.org/10.1111/j.1469-8986.2008.00654.x</a>.
+</div>
+<div id="ref-BrocherGraf2016" class="csl-entry" role="listitem">
+Brocher, Andreas, and Tim Graf. 2016. <span>“Pupil Old/New Effects Reflect Stimulus Encoding and Decoding in Short-Term Memory.”</span> <em>Psychophysiology</em> 53 (12): 1823–36. <a href="https://doi.org/10.1111/psyp.12770">https://doi.org/10.1111/psyp.12770</a>.
+</div>
+<div id="ref-BrownHeathcote2008" class="csl-entry" role="listitem">
+Brown, Scott D., and Andrew Heathcote. 2008. <span>“The Simplest Complete Model of Choice Response Time: Linear Ballistic Accumulation.”</span> <em>Cognitive Psychology</em> 57 (3): 153–78. <a href="https://doi.org/10.1016/j.cogpsych.2007.12.002">https://doi.org/10.1016/j.cogpsych.2007.12.002</a>.
+</div>
+<div id="ref-Cavanagh2014" class="csl-entry" role="listitem">
+Cavanagh, James F., Thomas V. Wiecki, Angad Kochar, and Michael J. Frank. 2014. <span>“Eye Tracking and Pupillometry Are Indicators of Dissociable Latent Decision Processes.”</span> <em>Journal of Experimental Psychology: General</em> 143 (4): 1476–88. <a href="https://doi.org/10.1037/a0035813">https://doi.org/10.1037/a0035813</a>.
+</div>
+<div id="ref-Chen2026" class="csl-entry" role="listitem">
+Chen, Ivory Y., Sebastiaan Mathôt, and Elkan G. Akyürek. 2026. <span>“Subtle Gaze and Pupil Dynamics: Detecting Recognition of Familiar Faces with Moving Serial Visual Presentation.”</span> <em>Journal of Cognition</em> 9 (1): 20. <a href="https://doi.org/10.5334/joc.492">https://doi.org/10.5334/joc.492</a>.
+</div>
+<div id="ref-CroninLippMarinovic2023" class="csl-entry" role="listitem">
+Cronin, Sophie L., Ottmar V. Lipp, and Welber Marinovic. 2023. <span>“Pupil Dilation During Encoding, but Not Type of Auditory Stimulation, Predicts Recognition Success in Face Memory.”</span> <em>Biological Psychology</em> 178: 108547. <a href="https://doi.org/10.1016/j.biopsycho.2023.108547">https://doi.org/10.1016/j.biopsycho.2023.108547</a>.
+</div>
+<div id="ref-cummingNewStatisticsWhy2014" class="csl-entry" role="listitem">
+Cumming, Geoff. 2014. <span>“The New Statistics: Why and How.”</span> <em>Psychological Science</em> 25 (1): 7–29. <a href="https://doi.org/10.1177/0956797613504966">https://doi.org/10.1177/0956797613504966</a>.
+</div>
+<div id="ref-webmorph" class="csl-entry" role="listitem">
+DeBruine, Lisa M. 2022. <em>webmorphR : Reproducible Stimuli</em>. Zenodo. <a href="https://doi.org/10.5281/zenodo.6570965">https://doi.org/10.5281/zenodo.6570965</a>.
+</div>
+<div id="ref-donkinGettingMoreAccuracy2009" class="csl-entry" role="listitem">
+Donkin, Chris, Lee Averell, Scott Brown, and Andrew Heathcote. 2009. <span>“Getting More from Accuracy and Response Time Data: Methods for Fitting the Linear Ballistic Accumulator.”</span> <em>Behavior Research Methods</em> 41 (4): 1095–110. <a href="https://doi.org/10.3758/BRM.41.4.1095">https://doi.org/10.3758/BRM.41.4.1095</a>.
+</div>
+<div id="ref-ElphickPikeHole2020" class="csl-entry" role="listitem">
+Elphick, Camilla E. J., Graham E. Pike, and Graham J. Hole. 2020. <span>“You Can Believe Your Eyes: Measuring Implicit Recognition in a Lineup with Pupillometry.”</span> <em>Psychology, Crime &amp; Law</em> 26 (1): 67–92. <a href="https://doi.org/10.1080/1068316X.2019.1634196">https://doi.org/10.1080/1068316X.2019.1634196</a>.
+</div>
+<div id="ref-fournier2026familiarity" class="csl-entry" role="listitem">
+Fournier, Raphaël, Paul Downing, and Richard Ramsey. 2026. <span>“How Does Familiarity Impact the Computational Processes That Support Face Recognition?”</span> <em>PsyArXiv</em>, ahead of print, August. <a href="https://doi.org/10.31234/osf.io/854t9_v1">https://doi.org/10.31234/osf.io/854t9_v1</a>.
+</div>
+<div id="ref-deGee2017" class="csl-entry" role="listitem">
+Gee, Jan Willem de, Olympia Colizoli, Niels A. Kloosterman, Tomas Knapen, Sander Nieuwenhuis, and Tobias H. Donner. 2017. <span>“Dynamic Modulation of Decision Biases by Brainstem Arousal Systems.”</span> <em>eLife</em> 6: e23232. <a href="https://doi.org/10.7554/eLife.23232">https://doi.org/10.7554/eLife.23232</a>.
+</div>
+<div id="ref-deGee2014" class="csl-entry" role="listitem">
+Gee, Jan Willem de, Tomas Knapen, and Tobias H. Donner. 2014. <span>“Decision-Related Pupil Dilation Reflects Upcoming Choice and Individual Bias.”</span> <em>Proceedings of the National Academy of Sciences</em> 111 (5): E618–25. <a href="https://doi.org/10.1073/pnas.1317557111">https://doi.org/10.1073/pnas.1317557111</a>.
+</div>
+<div id="ref-deGee2020" class="csl-entry" role="listitem">
+<span class="nocase">Gee, Jan Willem de, Konstantinos Tsetsos, Lars Schwabe, et al.</span> 2020. <span>“Pupil-Linked Phasic Arousal Predicts a Reduction of Choice Bias Across Species and Decision Domains.”</span> <em>eLife</em> 9: e54014. <a href="https://doi.org/10.7554/eLife.54014">https://doi.org/10.7554/eLife.54014</a>.
+</div>
+<div id="ref-Goldinger2009" class="csl-entry" role="listitem">
+Goldinger, Stephen D., Yi He, and Megan H. Papesh. 2009. <span>“Deficits in Cross-Race Face Learning: Insights from Eye Movements and Pupillometry.”</span> <em>Journal of Experimental Psychology: Learning, Memory, and Cognition</em> 35 (5): 1105–22. <a href="https://doi.org/10.1037/a0016548">https://doi.org/10.1037/a0016548</a>.
+</div>
+<div id="ref-GoldingerPapesh2012" class="csl-entry" role="listitem">
+Goldinger, Stephen D., and Megan H. Papesh. 2012. <span>“Pupil Dilation Reflects the Creation and Retrieval of Memories.”</span> <em>Current Directions in Psychological Science</em> 21 (2): 90–95. <a href="https://doi.org/10.1177/0963721412436811">https://doi.org/10.1177/0963721412436811</a>.
+</div>
+<div id="ref-HeaverHutton2011" class="csl-entry" role="listitem">
+Heaver, Becky, and Sam B. Hutton. 2011. <span>“Keeping an Eye on the Truth? Pupil Size Changes Associated with Recognition Memory.”</span> <em>Memory</em> 19 (4): 398–405. <a href="https://doi.org/10.1080/09658211.2011.575788">https://doi.org/10.1080/09658211.2011.575788</a>.
+</div>
+<div id="ref-KafkasMontaldi2015" class="csl-entry" role="listitem">
+Kafkas, Alexandros, and Daniela Montaldi. 2015. <span>“The Pupillary Response Discriminates Between Subjective and Objective Familiarity and Novelty.”</span> <em>Psychophysiology</em> 52 (9): 1305–16. <a href="https://doi.org/10.1111/psyp.12471">https://doi.org/10.1111/psyp.12471</a>.
+</div>
+<div id="ref-kruschkeBayesianDataAnalysis2018" class="csl-entry" role="listitem">
+Kruschke, John K., and Torrin M. Liddell. 2018. <span>“Bayesian Data Analysis for Newcomers.”</span> <em>Psychonomic Bulletin &amp; Review</em> 25 (1): 155–77. <a href="https://doi.org/10.3758/s13423-017-1272-1">https://doi.org/10.3758/s13423-017-1272-1</a>.
+</div>
+<div id="ref-Lapteva2024" class="csl-entry" role="listitem">
+Lapteva, Alexandra, and Corinna S. Martarelli. 2024. <span>“Pupil Old/New Effect as an Objective Measure of Recognition Memory: A Meta-Analysis of 17 Eye-Tracking Experiments.”</span> <em>Memory</em> 32 (9): 1211–26. <a href="https://doi.org/10.1080/09658211.2024.2395367">https://doi.org/10.1080/09658211.2024.2395367</a>.
+</div>
+<div id="ref-lewandowskyComputationalModelingCognition2018" class="csl-entry" role="listitem">
+Lewandowsky, Stephan, and Klaus Oberauer. 2018. <span>“Computational Modeling in Cognition and Cognitive Neuroscience.”</span> In <em>Stevens’ Handbook of Experimental Psychology and Cognitive Neuroscience</em>, 1st ed., edited by John T. Wixted. Wiley. <a href="https://doi.org/10.1002/9781119170174.epcn501">https://doi.org/10.1002/9781119170174.epcn501</a>.
+</div>
+<div id="ref-lyFlexibleEfficientHierarchical2017" class="csl-entry" role="listitem">
+Ly, Alexander, Udo Boehm, Andrew Heathcote, et al. 2017. <span>“A Flexible and Efficient Hierarchical Bayesian Approach to the Exploration of Individual Differences in Cognitive‐model‐based Neuroscience.”</span> In <em>Computational Models of Brain and Behavior</em>, 1st ed., edited by Ahmed A. Moustafa. Wiley. <a href="https://doi.org/10.1002/9781119159193.ch34">https://doi.org/10.1002/9781119159193.ch34</a>.
+</div>
+<div id="ref-MathotVilotijevic2022" class="csl-entry" role="listitem">
+Mathôt, Sebastiaan, and Ana Vilotijević. 2022. <span>“Methods in Cognitive Pupillometry: Design, Preprocessing, and Statistical Analysis.”</span> <em>Behavior Research Methods</em> 55 (6): 3055–77. <a href="https://doi.org/10.3758/s13428-022-01957-7">https://doi.org/10.3758/s13428-022-01957-7</a>.
+</div>
+<div id="ref-MatyjekBayerDziobek2021" class="csl-entry" role="listitem">
+Matyjek, Magdalena, Mareike Bayer, and Isabel Dziobek. 2021. <span>“Pupillary Responses to Faces Are Modulated by Familiarity and Rewarding Context.”</span> <em>Brain Sciences</em> 11 (6): 794. <a href="https://doi.org/10.3390/brainsci11060794">https://doi.org/10.3390/brainsci11060794</a>.
+</div>
+<div id="ref-matzkeBayesianInferenceCorrelations2017" class="csl-entry" role="listitem">
+Matzke, Dora, Alexander Ly, Ravi Selker, et al. 2017. <span>“Bayesian Inference for Correlations in the Presence of Measurement Error and Estimation Uncertainty.”</span> <em>Collabra: Psychology</em> 3 (1): 25. <a href="https://doi.org/10.1525/collabra.78">https://doi.org/10.1525/collabra.78</a>.
+</div>
+<div id="ref-mcelreath2018statistical" class="csl-entry" role="listitem">
+McElreath, Richard. 2018. <em>Statistical Rethinking: A <span>Bayesian</span> Course with Examples in <span>R</span> and <span>Stan</span></em>. Chapman; Hall/CRC. <a href="https://doi.org/10.1201/9781315372495">https://doi.org/10.1201/9781315372495</a>.
+</div>
+<div id="ref-MejiaValdesSosaBobes2024" class="csl-entry" role="listitem">
+Mejía, Manuel Alejandro, Mitchell Valdés-Sosa, and Maria Antonieta Bobes. 2024. <span>“Pupil Dilation Reflects Covert Familiar Face Recognition Under Interocular Suppression.”</span> <em>Consciousness and Cognition</em> 123: 103726. <a href="https://doi.org/10.1016/j.concog.2024.103726">https://doi.org/10.1016/j.concog.2024.103726</a>.
+</div>
+<div id="ref-Mill2016" class="csl-entry" role="listitem">
+Mill, Ravi D., Akira R. O’Connor, and Ian G. Dobbins. 2016. <span>“Pupil Dilation During Recognition Memory: Isolating Unexpected Recognition from Judgment Uncertainty.”</span> <em>Cognition</em> 154: 81–94. <a href="https://doi.org/10.1016/j.cognition.2016.05.014">https://doi.org/10.1016/j.cognition.2016.05.014</a>.
+</div>
+<div id="ref-Montefinese2013" class="csl-entry" role="listitem">
+Montefinese, Maria, Ettore Ambrosini, Beth Fairfield, and Nicola Mammarella. 2013. <span>“The <span>‘Subjective’</span> Pupil Old/New Effect: Is the Truth Plain to See?”</span> <em>International Journal of Psychophysiology</em> 89 (1): 48–56. <a href="https://doi.org/10.1016/j.ijpsycho.2013.05.001">https://doi.org/10.1016/j.ijpsycho.2013.05.001</a>.
+</div>
+<div id="ref-Murphy2016" class="csl-entry" role="listitem">
+Murphy, Peter R., Evert Boonstra, and Sander Nieuwenhuis. 2016. <span>“Global Gain Modulation Generates Time-Dependent Urgency During Perceptual Choice in Humans.”</span> <em>Nature Communications</em> 7: 13526. <a href="https://doi.org/10.1038/ncomms13526">https://doi.org/10.1038/ncomms13526</a>.
+</div>
+<div id="ref-Murphy2014" class="csl-entry" role="listitem">
+Murphy, Peter R., Joachim Vandekerckhove, and Sander Nieuwenhuis. 2014. <span>“Pupil-Linked Arousal Determines Variability in Perceptual Decision Making.”</span> <em>PLOS Computational Biology</em> 10 (9): e1003854. <a href="https://doi.org/10.1371/journal.pcbi.1003854">https://doi.org/10.1371/journal.pcbi.1003854</a>.
+</div>
+<div id="ref-Naber2013" class="csl-entry" role="listitem">
+Naber, Marnix, George A. Alvarez, and Ken Nakayama. 2013. <span>“Tracking the Allocation of Attention Using Human Pupillary Oscillations.”</span> <em>Frontiers in Psychology</em> 4: 919. <a href="https://doi.org/10.3389/fpsyg.2013.00919">https://doi.org/10.3389/fpsyg.2013.00919</a>.
+</div>
+<div id="ref-Nunez2024" class="csl-entry" role="listitem">
+Nunez, Michael D., Kiante Fernandez, Ramesh Srinivasan, and Joachim Vandekerckhove. 2024. <span>“A Tutorial on Fitting Joint Models of <span>M/EEG</span> and Behavior to Understand Cognition.”</span> <em>Behavior Research Methods</em>, ahead of print. <a href="https://doi.org/10.3758/s13428-023-02331-x">https://doi.org/10.3758/s13428-023-02331-x</a>.
+</div>
+<div id="ref-Otero2011" class="csl-entry" role="listitem">
+Otero, Sian C., Brendan S. Weekes, and Samuel B. Hutton. 2011. <span>“Pupil Size Changes During Recognition Memory.”</span> <em>Psychophysiology</em> 48 (10): 1346–53. <a href="https://doi.org/10.1111/j.1469-8986.2011.01217.x">https://doi.org/10.1111/j.1469-8986.2011.01217.x</a>.
+</div>
+<div id="ref-Ratcliff1978" class="csl-entry" role="listitem">
+Ratcliff, Roger. 1978. <span>“A Theory of Memory Retrieval.”</span> <em>Psychological Review</em> 85 (2): 59–108. <a href="https://doi.org/10.1037/0033-295X.85.2.59">https://doi.org/10.1037/0033-295X.85.2.59</a>.
+</div>
+<div id="ref-Ratcliff2004" class="csl-entry" role="listitem">
+Ratcliff, Roger, Anjali Thapar, and Gail McKoon. 2004. <span>“A Diffusion Model Analysis of the Effects of Aging on Recognition Memory.”</span> <em>Journal of Memory and Language</em> 50 (4): 408–24. <a href="https://doi.org/10.1016/j.jml.2003.11.002">https://doi.org/10.1016/j.jml.2003.11.002</a>.
+</div>
+<div id="ref-VanRij2019" class="csl-entry" role="listitem">
+Rij, Jacolien van, Petra Hendriks, Hedderik van Rijn, R. Harald Baayen, and Simon N. Wood. 2019. <span>“Analyzing the Time Course of Pupillometric Data.”</span> <em>Trends in Hearing</em> 23: 2331216519832483. <a href="https://doi.org/10.1177/2331216519832483">https://doi.org/10.1177/2331216519832483</a>.
+</div>
+<div id="ref-Schwetlick2025" class="csl-entry" role="listitem">
+Schwetlick, Lisa, Hendrik Graupner, Olaf Dimigen, and Ralf Engbert. 2025. <span>“Distinctive Pupil and Microsaccade-Rate Signatures in Self-Recognition.”</span> <em>Journal of Vision</em> 25 (4): 16, 1–15. <a href="https://doi.org/10.1167/jov.25.4.16">https://doi.org/10.1167/jov.25.4.16</a>.
+</div>
+<div id="ref-simonsConstraintsGeneralityCOG2017" class="csl-entry" role="listitem">
+Simons, Daniel, Yuichi Shoda, and D. Lindsay. 2017. <span>“Constraints on Generality (COG): A Proposed Addition to All Empirical Papers.”</span> <em>Perspectives on Psychological Science</em> 12 (August): 174569161770863. <a href="https://doi.org/10.1177/1745691617708630">https://doi.org/10.1177/1745691617708630</a>.
+</div>
+<div id="ref-EMC2" class="csl-entry" role="listitem">
+Stevenson, Niek, Michelle Donzallaz, Andrew Heathcote, and Steven Miletić. 2026. <em>EMC2: Bayesian Hierarchical Analysis of Cognitive Models of Choice</em>. <a href="https://doi.org/10.32614/CRAN.package.EMC2">https://doi.org/10.32614/CRAN.package.EMC2</a>.
+</div>
+<div id="ref-TaikhBodner2022" class="csl-entry" role="listitem">
+Taikh, Alexander, and Glen E. Bodner. 2022. <span>“Pupil Dilation During Recognition Reflects the Subjective Recollection/Familiarity Experience at Test Rather Than the Level of Processing at Encoding.”</span> <em>Canadian Journal of Experimental Psychology / Revue Canadienne de Psychologie Exp<span>é</span>rimentale</em> 76 (3): 186–92. <a href="https://doi.org/10.1037/cep0000283">https://doi.org/10.1037/cep0000283</a>.
+</div>
+<div id="ref-Turner2017" class="csl-entry" role="listitem">
+Turner, Brandon M., Birte U. Forstmann, Bradley C. Love, Thomas J. Palmeri, and Leendert Van Maanen. 2017. <span>“Approaches to Analysis in Model-Based Cognitive Neuroscience.”</span> <em>Journal of Mathematical Psychology</em> 76 (B): 65–79. <a href="https://doi.org/10.1016/j.jmp.2016.01.001">https://doi.org/10.1016/j.jmp.2016.01.001</a>.
+</div>
+<div id="ref-Turner2019" class="csl-entry" role="listitem">
+Turner, Brandon M., Birte U. Forstmann, and Mark Steyvers. 2019. <em>Joint Models of Neural and Behavioral Data</em>. Computational Approaches to Cognition and Perception. Springer International Publishing. <a href="https://doi.org/10.1007/978-3-030-03688-1">https://doi.org/10.1007/978-3-030-03688-1</a>.
+</div>
+<div id="ref-Turner2013" class="csl-entry" role="listitem">
+Turner, Brandon M., Birte U. Forstmann, Eric-Jan Wagenmakers, Scott D. Brown, Per B. Sederberg, and Mark Steyvers. 2013. <span>“A Bayesian Framework for Simultaneously Modeling Neural and Behavioral Data.”</span> <em>NeuroImage</em> 72: 193–206. <a href="https://doi.org/10.1016/j.neuroimage.2013.01.048">https://doi.org/10.1016/j.neuroimage.2013.01.048</a>.
+</div>
+<div id="ref-Turner2015" class="csl-entry" role="listitem">
+Turner, Brandon M., Leendert van Maanen, and Birte U. Forstmann. 2015. <span>“Informing Cognitive Abstractions Through Neuroimaging: The Neural Drift Diffusion Model.”</span> <em>Psychological Review</em> 122 (2): 312–36. <a href="https://doi.org/10.1037/a0038894">https://doi.org/10.1037/a0038894</a>.
+</div>
+<div id="ref-Urai2017" class="csl-entry" role="listitem">
+Urai, Anne E., Anke Braun, and Tobias H. Donner. 2017. <span>“Pupil-Linked Arousal Is Driven by Decision Uncertainty and Alters Serial Choice Bias.”</span> <em>Nature Communications</em> 8: 14637. <a href="https://doi.org/10.1038/ncomms14637">https://doi.org/10.1038/ncomms14637</a>.
+</div>
+<div id="ref-Vo2008" class="csl-entry" role="listitem">
+Võ, Melissa L.-H., Arthur M. Jacobs, Lars Kuchinke, et al. 2008. <span>“The Coupling of Emotion and Cognition in the Eye: Introducing the Pupil Old/New Effect.”</span> <em>Psychophysiology</em> 45 (1): 130–40. <a href="https://doi.org/10.1111/j.1469-8986.2007.00606.x">https://doi.org/10.1111/j.1469-8986.2007.00606.x</a>.
+</div>
+<div id="ref-WangMunoz2015" class="csl-entry" role="listitem">
+Wang, Chin-An, and Douglas P. Munoz. 2015. <span>“A Circuit for Pupil Orienting Responses: Implications for Cognitive Modulation of Pupil Size.”</span> <em>Current Opinion in Neurobiology</em> 33: 134–40. <a href="https://doi.org/10.1016/j.conb.2015.03.018">https://doi.org/10.1016/j.conb.2015.03.018</a>.
+</div>
+<div id="ref-Wu2012" class="csl-entry" role="listitem">
+Wu, Esther Xiu Wen, Bruno Laeng, and Svein Magnussen. 2012. <span>“Through the Eyes of the Own-Race Bias: Eye-Tracking and Pupillometry During Face Recognition.”</span> <em>Social Neuroscience</em> 7 (2): 202–16. <a href="https://doi.org/10.1080/17470919.2011.596946">https://doi.org/10.1080/17470919.2011.596946</a>.
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

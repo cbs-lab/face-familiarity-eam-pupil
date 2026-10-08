@@ -1,0 +1,959 @@
+---
+title: "Joint LBA-Pupil Smoke Test"
+subtitle: "Learned/Novel x Accuracy design, pipeline check only"
+format: html
+editor: source
+editor_options:
+  chunk_output_type: console
+---
+
+# Purpose
+
+This is not a parameter recovery study.
+The original recovery script tested whether EMC2 could recover known ground truth for a simpler easy/hard design.
+Here the goal is narrower: confirm that the `design()`, `make_emc()`, and `fit()` calls run cleanly for the learned/novel x accuracy structure, before running a fit to real data.
+Iterations are kept deliberately short.
+Nothing here should be interpreted as a result.
+
+The simulated ground truth embodies two things we already know from real data:
+
+1. The drift-rate true/false effect is bigger for novel stimuli than for learned stimuli.
+2. The pupil learned/novel effect is present on correct trials and roughly absent on incorrect trials.
+
+A shared per-subject factor (`g`) is also built into both DVs' interaction contrasts on purpose.
+This gives the later extraction/contrast pipeline a known, moderate, positive correlation to try to recover, rather than pure noise.
+
+# Background context
+
+This document sketches a workflow for asking whether individual differences in evidence-accumulation quality (from the LBA) and individual differences in pupil dilation are linked, for the face familiarity old/new effect specifically.
+The motivating pattern is one we've already seen across several studies: the pupil shows a learned-vs-novel dilation difference on correct trials, but this difference is largely absent on incorrect trials.
+The question this workflow is built to ask is whether that pattern holds at the level of individual people - do the participants who show a stronger accuracy-linked memory signal in their choice behaviour also show a stronger accuracy-gated pupil effect, across the sample?
+
+This is planned as a two-part analysis, not a replacement for either part on its own.
+The primary analysis is a set of conventional correlations between drift rate, threshold, and pupil metrics, computed independently for each measure and then correlated across people using standard plausible-value correlation methods and scatterplots.
+The joint model described here is a supplementary, exploratory addition on top of that, included partly to see what it adds and partly as a demonstration of the approach for future work.
+
+The key difference from the conventional correlations is where the drift-rate and pupil estimates come from.
+In the conventional approach, the LBA and the pupil regression are fit as two entirely separate models, each shrinking its own subject-level estimates toward its own group mean using only its own data.
+In the joint model, both sets of subject-level parameters - collectively called `alpha` - are drawn from a single shared multivariate distribution, with one covariance matrix spanning both measures at once.
+This means a subject's drift-rate estimate is informed, in part, by their pupil data, and vice versa, in proportion to however strongly the two are estimated to correlate.
+That cross-measure "borrowing of strength" is the one thing the joint model can do that fitting two separate models and then correlating the results afterward cannot, and it's the main reason to bother with the more complex setup at all.
+
+Because both DVs are estimated with cell-means coding (four cells each: learned-correct, learned-incorrect, novel-correct, novel-incorrect), the joint model's shared covariance matrix comes out as 14x14 once the other free behavioural parameters (threshold, non-decision time, and so on) are included, giving 91 unique correlations in total.
+Almost all of these are not of direct interest, so the script pulls out three specific views of that one matrix rather than reporting all of it in the main write-up: the four same-cell correlations (e.g. learned-correct drift rate against learned-correct pupil), useful as a direct point of comparison against the conventional correlations; a single derived correlation between the learned-vs-novel interaction contrast in drift rate and the equivalent contrast in pupil, which is the quantity most directly tied to the old/new-effect hypothesis; and the full matrix, kept as supplementary material for completeness rather than something to interpret cell by cell.
+
+What's below is a smoke test, not the real analysis - simulated data, deliberately short sampling settings, and ground-truth values chosen to be qualitatively right rather than to match any particular study precisely.
+Its only job is to confirm the design, model-fitting, and extraction code all run correctly end to end before committing real fitting time.
+Scaling this up to the real dataset mainly means three things: swapping the simulated `behav_data` and `pupil_trial_data` in sections 2-3 for the real trial-level data (matching the same column names and factor levels), increasing `iter` and removing or tightening the loose `stop_criteria` in section 5 so the sampler is allowed to reach proper convergence rather than exiting early, and re-running the `check()` and name-verification steps in section 6 before trusting the extraction code in section 7 against the new fit.
+The extraction, contrast, and correlation code in section 7 shouldn't need to change at all - it was written against the parameter names, not the data - which is the main point of having run it against this smoke test first.
+
+```{r}
+#| label: setup
+library(EMC2)
+library(tidyverse)
+library(ggpubr)
+
+#library(MASS) ## loaded inline below to avoid masking dplyr::select
+#library(tidybayes) ## loaded inline below to avoid masking
+```
+
+# 1. Ground Truth
+
+```{r}
+#| label: ground-truth
+set.seed(123)
+
+n_subjects <- 30
+n_trials_per_condition <- 90
+
+# shared individual-differences factor.
+# loads positively on both the drift interaction contrast and the pupil interaction contrast.
+# this is the signal step 2's extraction pipeline should be able to detect.
+g <- rnorm(n_subjects)
+
+# cell-mean baselines, chosen to match the qualitative pattern, not a specific published effect size.
+base_drift <- c(
+  learned_true = 3.0,
+  learned_false = 2.6,
+  novel_true = 2.8,
+  novel_false = 1.8
+)
+base_pupil <- c(
+  learned_true = 4.5,
+  learned_false = 3.5,
+  novel_true = 3.0,
+  novel_false = 3.4
+)
+
+# loadings on g: bigger for the cell pair that defines each DV's "headline" gap.
+# drift: novel true/false gap should grow with g, learned gap barely moves.
+# pupil: learned true/false gap should grow with g, novel gap barely moves.
+individual_pars <- tibble(
+  subjects = factor(1:n_subjects),
+  g = g,
+  drift_learned_true = base_drift["learned_true"] +
+    0.05 * g +
+    rnorm(n_subjects, 0, 0.3),
+  drift_learned_false = base_drift["learned_false"] -
+    0.05 * g +
+    rnorm(n_subjects, 0, 0.3),
+  drift_novel_true = base_drift["novel_true"] +
+    0.30 * g +
+    rnorm(n_subjects, 0, 0.3),
+  drift_novel_false = base_drift["novel_false"] -
+    0.30 * g +
+    rnorm(n_subjects, 0, 0.3),
+  pupil_learned_true = base_pupil["learned_true"] +
+    0.30 * g +
+    rnorm(n_subjects, 0, 0.3),
+  pupil_learned_false = base_pupil["learned_false"] -
+    0.30 * g +
+    rnorm(n_subjects, 0, 0.3),
+  pupil_novel_true = base_pupil["novel_true"] +
+    0.05 * g +
+    rnorm(n_subjects, 0, 0.3),
+  pupil_novel_false = base_pupil["novel_false"] -
+    0.05 * g +
+    rnorm(n_subjects, 0, 0.3)
+)
+
+# sanity check on the two contrasts and their correlation, before any model touches this.
+# drift_effect: novel gap minus learned gap (should be positive, novel gap bigger).
+# pupil_effect: learned gap minus novel gap (should be positive, learned gap bigger, driven by g too).
+ground_truth_check <- individual_pars |>
+  mutate(
+    drift_effect = (drift_novel_true - drift_novel_false) -
+      (drift_learned_true - drift_learned_false),
+    pupil_effect = (pupil_learned_true - pupil_learned_false) -
+      (pupil_novel_true - pupil_novel_false)
+  )
+
+cat("=== GROUND TRUTH CHECK ===\n\n")
+cat(
+  "Mean drift effect (novel - learned):",
+  round(mean(ground_truth_check$drift_effect), 2),
+  "\n"
+)
+cat(
+  "Mean pupil effect (learned - novel):",
+  round(mean(ground_truth_check$pupil_effect), 2),
+  "\n"
+)
+cat(
+  "Correlation of the two contrasts (target for step 2 to recover):",
+  round(
+    cor(ground_truth_check$drift_effect, ground_truth_check$pupil_effect),
+    2
+  ),
+  "\n"
+)
+```
+
+This correlation number is the one step 2's extraction pipeline should land somewhere near, once we have real posterior draws to work with instead of point estimates.
+It will not match exactly, since the joint model estimates this from noisy trial-level data, not from these underlying subject values directly.
+
+# 2. Simulate Behavioural Data
+
+```{r}
+#| label: simulate-behavior
+matchfun <- function(d) d$S == d$lR
+
+design_behav <- design(
+  factors = list(
+    subjects = levels(individual_pars$subjects),
+    S = c("learned", "novel")
+  ),
+  Rlevels = c("learned", "novel"),
+  model = LBA,
+  matchfun = matchfun,
+  formula = list(
+    v ~ 0 + S:lM,
+    sv ~ 0 + lM,
+    B ~ 0 + lR,
+    A ~ 1,
+    t0 ~ 1
+  ),
+  constants = c(sv_lMFALSE = log(1))
+)
+
+# confirm the actual parameter names before building the parameter matrix.
+# EMC2's naming for interactions and colons can differ from what you'd guess.
+param_names <- names(attr(design_behav, "p_vector"))
+cat("=== BEHAVIOURAL PARAMETER NAMES ===\n")
+print(param_names)
+```
+
+```{r}
+#| label: parameter-matrix
+# NOTE: the four v_ column names below are a best guess at EMC2's naming convention.
+# Check them against param_names above and rename if they don't match before running make_data().
+parameters <- individual_pars |>
+  mutate(
+    `v_Slearned:lMTRUE` = drift_learned_true,
+    `v_Slearned:lMFALSE` = drift_learned_false,
+    `v_Snovel:lMTRUE` = drift_novel_true,
+    `v_Snovel:lMFALSE` = drift_novel_false,
+    sv_lMTRUE = log(1),
+    B_lRlearned = log(0.8),
+    B_lRnovel = log(0.8),
+    A = log(0.4),
+    t0 = log(0.25)
+  ) |>
+  dplyr::select(subjects, all_of(param_names)) |>
+  column_to_rownames("subjects") |>
+  as.matrix()
+
+behav_data <- make_data(
+  parameters = parameters,
+  design = design_behav,
+  n_trials = n_trials_per_condition
+)
+
+cat("\n=== BEHAVIOURAL DATA ===\n\n")
+behav_data |>
+  mutate(correct = S == R) |>
+  group_by(S) |>
+  summarise(n = n(), acc = mean(correct), rt = mean(rt), .groups = "drop") |>
+  print()
+```
+
+Check accuracy and RT look directionally sensible for this design before moving on.
+Novel should show a bigger accuracy spread relative to its own baseline given the bigger drift gap, though with only 30 simulated subjects and 90 trials/cell, do not expect a clean signal at this stage.
+
+# 3. Simulate Trial-Level Pupil Data
+
+```{r}
+#| label: simulate-pupil
+pupil_trial_data <- behav_data |>
+  mutate(correct = if_else(S == R, "true", "false")) |>
+  left_join(
+    individual_pars |>
+      dplyr::select(
+        subjects,
+        pupil_learned_true,
+        pupil_learned_false,
+        pupil_novel_true,
+        pupil_novel_false
+      ),
+    by = "subjects"
+  ) |>
+  mutate(
+    pupil_mean = case_when(
+      S == "learned" & correct == "true" ~ pupil_learned_true,
+      S == "learned" & correct == "false" ~ pupil_learned_false,
+      S == "novel" & correct == "true" ~ pupil_novel_true,
+      S == "novel" & correct == "false" ~ pupil_novel_false
+    ),
+    pupil = rnorm(n(), mean = pupil_mean, sd = 0.3)
+  ) |>
+  dplyr::select(trials, subjects, S, R, correct, pupil)
+
+cat("=== PUPIL DATA ===\n\n")
+pupil_trial_data |>
+  group_by(S, correct) |>
+  summarise(n = n(), mean_pupil = mean(pupil), .groups = "drop") |>
+  print()
+```
+
+The learned/correct cell should show the highest mean pupil, and the learned-vs-novel gap should be small on incorrect trials.
+If this table doesn't show that pattern, check the `case_when()` mapping above before going further.
+
+# 4. Pupil Design (cell-means coding, four dummy predictors)
+
+```{r}
+#| label: pupil-design
+pupil_design_matrices <- pupil_trial_data |>
+  mutate(
+    learned_true = as.numeric(S == "learned" & correct == "true"),
+    learned_false = as.numeric(S == "learned" & correct == "false"),
+    novel_true = as.numeric(S == "novel" & correct == "true"),
+    novel_false = as.numeric(S == "novel" & correct == "false")
+  ) |>
+  group_by(subjects) |>
+  group_split() |>
+  setNames(levels(pupil_trial_data$subjects)) |>
+  map(\(d) {
+    d |>
+      dplyr::select(learned_true, learned_false, novel_true, novel_false) |>
+      as.data.frame()
+  })
+
+pupil_data <- pupil_trial_data |>
+  dplyr::select(subjects, pupil) |>
+  mutate(subjects = factor(subjects))
+
+design_pupil <- design_fmri(
+  design_matrix = pupil_design_matrices,
+  model = MRI
+)
+
+cat("=== PUPIL DESIGN ===\n")
+summary(design_pupil)
+```
+
+No intercept/constant column here.
+The four dummy predictors already sum to 1 on every row, so adding a constant would make the design matrix rank-deficient.
+
+# 5. Fit Joint Model (smoke-test settings only)
+
+```{r}
+#| label: fit-model
+joint_emc <- make_emc(
+  data = list(pupil = pupil_data, behavior = behav_data),
+  design = list(pupil = design_pupil, behavior = design_behav),
+  type = "standard",
+  n_chains = 3,
+  compress = TRUE
+)
+
+# iter and cores kept small on purpose.
+# this run is to confirm the pipeline executes, not to produce interpretable estimates.
+# scale both up substantially for the real fit on real data.
+joint_fit <- fit(
+  joint_emc,
+  iter = 200,
+  step_size = 100,
+  cores_for_chains = 1,
+  cores_per_chain = 3,
+  verbose = TRUE,
+  fileName = "samples/joint_smoke_test.RData"
+)
+```
+
+# 6. Pipeline Checks (not results)
+
+```{r}
+#| label: pipeline-checks
+## read in from file, if previously compiled
+load("samples/joint_model_try_1.RData")
+joint_fit <- emc
+rm(emc)
+
+# confirm the fit object has the expected structure, not that it has converged.
+# with iter = 200 on a smoke test, do not expect clean rhat/ess here.
+check(joint_fit)
+
+# confirm alpha and correlation selections both return without error,
+# and that the parameter names match what step 2's extraction code will expect.
+alpha_summ <- summary(joint_fit, selection = "alpha")
+names(alpha_summ)
+
+corr_summ <- summary(joint_fit, selection = "correlation")
+names(corr_summ)
+```
+
+If both selections return cleanly and the names look right, the pipeline is ready for real data and for the extraction/contrast code in step 2.
+If `check()` throws an error or the parameter names don't match the `v_` names anticipated in the parameter matrix step, that's the thing to fix here, before any real fitting time gets spent.
+
+
+# 7. Extraction, Contrast, and Correlation Pipeline (Step 2)
+
+This section builds the three-tier reporting structure discussed earlier.
+Tier 1 is the full native correlation matrix, destined for supplementary material.
+Tier 2 is the four matched same-cell correlations, a direct subset of tier 1, for the main-text comparison against the non-joint plausible-value correlations.
+Tier 3 is the interaction-contrast correlation, a derived quantity computed post-hoc from `alpha` draws, and the one most directly tied to the old/new-effect hypothesis.
+
+This code is written against the parameter names confirmed in section 6's `check()` output.
+If you re-run section 5 and the names change (e.g. after fixing nuisance parameters as constants), re-check `names(alpha_summ)` and `names(corr_summ)` before running this section.
+
+```{r}
+#| label: extract-alpha-draws
+# one row per posterior sample per subject, chains already pooled.
+# row_number() within each subject preserves original sample order regardless
+# of how parameters() interleaves subjects and samples in the raw output,
+# so this gives a safe shared "draw" index to pair subjects within.
+alpha_draws <- EMC2::parameters(joint_fit, selection = "alpha") |>
+  as_tibble() |>
+  group_by(subjects) |>
+  mutate(draw = row_number()) |>
+  ungroup()
+
+cat("=== ALPHA DRAWS STRUCTURE ===\n")
+cat(
+  "Rows:",
+  nrow(alpha_draws),
+  "| Subjects:",
+  n_distinct(alpha_draws$subjects),
+  "| Draws per subject:",
+  max(alpha_draws$draw),
+  "\n"
+)
+```
+
+
+## Contrasts of interest
+
+```{r}
+# Create the drift (TRUE-FALSE) by condition
+alpha_draws_contrasts <- alpha_draws |>
+  select(subjects, draw, `pupil_mean|learned_true`, `pupil_mean|learned_false`, `pupil_mean|novel_true`, `pupil_mean|novel_false`,
+         `behavior|v_SNovel:lMTRUE`, `behavior|v_SNovel:lMFALSE`, `behavior|v_SLearned:lMTRUE`, `behavior|v_SLearned:lMFALSE`) |>
+  mutate(drift_learned = `behavior|v_SLearned:lMTRUE` - `behavior|v_SLearned:lMFALSE`,
+         drift_novel = `behavior|v_SNovel:lMTRUE` - `behavior|v_SNovel:lMFALSE`) |>
+  select(subjects, draw, `pupil_mean|learned_true`, `pupil_mean|learned_false`, `pupil_mean|novel_true`, `pupil_mean|novel_false`, drift_learned, drift_novel)
+
+alpha_draws_contrasts_learned <- alpha_draws_contrasts |>
+  select(subjects, draw, `pupil_mean|learned_true`, `pupil_mean|learned_false`, drift_learned)
+
+alpha_draws_contrasts_novel <- alpha_draws_contrasts |>
+  select(subjects, draw, `pupil_mean|novel_true`, `pupil_mean|novel_false`, drift_novel)
+
+
+#Point estimates correlations learned
+point_estimates_corr_learned <- alpha_draws_contrasts_learned |>
+  group_by(subjects) |>
+  summarise(median_drift = median(drift_learned),
+            mean_pupil_true = mean(`pupil_mean|learned_true`),
+            mean_pupil_false = mean(`pupil_mean|learned_false`)) |>
+  pivot_longer(
+    cols = c(mean_pupil_false, mean_pupil_true),
+    names_to = "accuracy",
+    values_to = "mean_pupil",
+    names_transform = list(accuracy = ~ str_remove(.x, "mean_pupil_"))
+  ) |>
+  mutate(accuracy = factor(accuracy, levels = c("true", "false"), labels = c("TRUE", "FALSE"))) |>
+  group_by(accuracy) |>
+  mutate(r = cor(median_drift, mean_pupil)) |>
+  ungroup()
+
+
+#Point estimates correlations novel
+point_estimates_corr_novel <- alpha_draws_contrasts_novel |>
+  group_by(subjects) |>
+  summarise(median_drift = median(drift_novel),
+            mean_pupil_true = mean(`pupil_mean|novel_true`),
+            mean_pupil_false = mean(`pupil_mean|novel_false`)) |>
+  pivot_longer(
+    cols = c(mean_pupil_false, mean_pupil_true),
+    names_to = "accuracy",
+    values_to = "mean_pupil",
+    names_transform = list(accuracy = ~ str_remove(.x, "mean_pupil_"))
+  ) |>
+  mutate(accuracy = factor(accuracy, levels = c("true", "false"), labels = c("TRUE", "FALSE"))) |>
+  group_by(accuracy) |>
+  mutate(r = cor(median_drift, mean_pupil)) |>
+  ungroup()
+
+#Contrasts learned
+contrast_corr_draws_learned <- alpha_draws_contrasts_learned |>
+  group_by(draw) |>
+  summarise(r_pupil_true = cor(drift_learned, `pupil_mean|learned_true`),
+            r_pupil_false = cor(drift_learned, `pupil_mean|learned_false`), .groups = "drop") |>
+  pivot_longer(
+    cols = c(r_pupil_true, r_pupil_false),
+    names_to = "accuracy",
+    values_to = "r",
+    names_transform = list(accuracy = ~ str_remove(.x, "r_pupil_"))
+  ) |>
+  mutate(accuracy = factor(accuracy, levels = c("true", "false"), labels = c("TRUE", "FALSE")))
+
+#Contrasts novel
+contrast_corr_draws_novel <- alpha_draws_contrasts_novel |>
+  group_by(draw) |>
+  summarise(r_pupil_true = cor(drift_novel, `pupil_mean|novel_true`),
+            r_pupil_false = cor(drift_novel, `pupil_mean|novel_false`), .groups = "drop") |>
+  pivot_longer(
+    cols = c(r_pupil_true, r_pupil_false),
+    names_to = "accuracy",
+    values_to = "r",
+    names_transform = list(accuracy = ~ str_remove(.x, "r_pupil_"))
+  ) |>
+  mutate(accuracy = factor(accuracy, levels = c("true", "false"), labels = c("TRUE", "FALSE")))
+
+
+#Plotting point estimates
+p.1.1 <- ggplot(point_estimates_corr_novel, aes(x = median_drift, y = mean_pupil, color = accuracy)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.15) +
+  stat_cor(
+    aes(label = paste(after_stat(r.label))),
+    method = "pearson",
+    label.x.npc = "left",
+    label.y.npc = "top",
+    show.legend = FALSE
+  ) +
+  scale_color_manual(values = c("TRUE" = "#2E86AB", "FALSE" = "#E63946")) +
+  labs(
+    title = "Novel faces: Correlations between posterior 
+mean pupil size and drift rate (TRUE-FALSE) by accuracy",
+    x = "Mean drift rate",
+    y = "Median pupil",
+    color = "Accuracy"
+  ) +
+  theme_minimal(base_size = 13)
+
+p.1.2 <-ggplot(point_estimates_corr_learned, aes(x = median_drift, y = mean_pupil, color = accuracy)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.15) +
+  stat_cor(
+    aes(label = paste(after_stat(r.label))),
+    method = "pearson",
+    label.x.npc = "left",
+    label.y.npc = "top",
+    show.legend = FALSE
+  ) +
+  scale_color_manual(values = c("TRUE" = "#2E86AB", "FALSE" = "#E63946")) +
+  labs(
+    title = "Learned faces: Correlations between posterior 
+mean pupil size and drift rate (TRUE-FALSE) by accuracy",
+    x = "Median drift rate (TRUE-FALSE) ",
+    y = "Mean pupil size",
+    color = "Accuracy"
+  ) +
+  theme_minimal(base_size = 13)
+
+p.1.3 <- p.1.1 | p.1.2
+ggsave("figures/joint_model/point_estimates_drif_rate_tf_pupil_accuracy.jpeg", height = 10, width = 15)
+
+
+#Plotting contrasts
+p.2.1  <- ggplot(contrast_corr_draws_novel, aes(x = r, group = accuracy)) +
+  tidybayes::stat_halfeye(
+    aes(fill = accuracy),
+    alpha = 0.7,
+    .width = c(0.66, 0.95)
+  ) +
+  scale_fill_manual(values = c("TRUE" = "#2E86AB", "FALSE" = "#E63946")) +
+  labs(
+    title = "Novel faces: Drift rate (TRUE-FALSE) x Pupil accuracy contrasts",
+    x = "Plausible r (across subjects, within each posterior draw)",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.y = element_blank(), panel.grid.major.y = element_blank())
+
+p.2.2 <- ggplot(contrast_corr_draws_learned, aes(x = r, group = accuracy)) +
+  tidybayes::stat_halfeye(
+    aes(fill = accuracy),
+    alpha = 0.7,
+    .width = c(0.66, 0.95)
+  ) +
+  scale_fill_manual(values = c("TRUE" = "#2E86AB", "FALSE" = "#E63946")) +
+  labs(
+    title = "Novel faces: Drift rate (TRUE-FALSE) x Pupil accuracy contrasts",
+    x = "Plausible r (across subjects, within each posterior draw)",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.y = element_blank(), panel.grid.major.y = element_blank())
+
+p.2.3 <- p.2.1 | p.2.2
+
+
+ggsave("figures/joint_model/contrasts_drif_rate_tf_pupil_accuracy.jpeg", height = 10, width = 15)
+
+
+
+```
+
+##Contrasts weighted
+```{r}
+alpha_draws_weighted <- alpha_draws |>
+  left_join(sdt_summary, by = "subjects") |>  # need n_hit, n_miss per subject
+  mutate(
+    pupil_learned = (hit * `pupil_mean|learned_true` + miss * `pupil_mean|learned_false`) / (hit + miss),
+    pupil_novel   = (cr * `pupil_mean|novel_true` + fa * `pupil_mean|novel_false`) / (cr + fa),
+    drift_learned = `behavior|v_SLearned:lMTRUE` - `behavior|v_SLearned:lMFALSE`,
+    drift_novel = `behavior|v_SNovel:lMTRUE` - `behavior|v_SNovel:lMFALSE`) |>
+  select(subjects, draw, pupil_learned, pupil_novel, drift_learned, drift_novel)
+
+alpha_draws_contrasts_weighted_learned <- alpha_draws_weighted |>
+  select(subjects, draw, pupil_learned, drift_learned)
+
+alpha_draws_contrasts_weighted_novel <- alpha_draws_weighted |>
+  select(subjects, draw, pupil_novel, drift_novel)
+
+#Point estimates correlations learned
+point_estimates_corr_learned <- alpha_draws_contrasts_weighted_learned |>
+  group_by(subjects) |>
+  summarise(median_drift = median(drift_learned),
+            median_pupil = median(pupil_learned)) |>
+    ungroup() |>
+  mutate(r = cor(median_drift, median_pupil))
+
+p3.1 <- ggplot(point_estimates_corr_learned, aes(x = median_drift, y = median_pupil)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.15) +
+  stat_cor(
+    aes(label = paste(after_stat(r.label))),
+    method = "pearson",
+    label.x.npc = "left",
+    label.y.npc = "top",
+    show.legend = FALSE
+  ) +
+  labs(
+    title = "Correlations between drift rate learned 
+(TRUE-FALSE) and pupil learned",
+    x = "Median drift rate",
+    y = "Median pupil",
+  ) +
+  theme_minimal(base_size = 13)
+
+#Point estimates correlations novel
+point_estimates_corr_novel <- alpha_draws_contrasts_weighted_novel |>
+  group_by(subjects) |>
+  summarise(median_drift = median(drift_novel),
+            median_pupil = median(pupil_novel)) |>
+  ungroup() |>
+  mutate(r = cor(median_drift, median_pupil))
+
+point_estimates_corr_learned <- alpha_draws_contrasts_weighted_learned |>
+  group_by(subjects) |>
+  summarise(median_drift = median(drift_learned),
+            median_pupil = median(pupil_learned)) |>
+    ungroup() |>
+  mutate(r = cor(median_drift, median_pupil))
+
+p3.2 <- ggplot(point_estimates_corr_novel, aes(x = median_drift, y = median_pupil)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.15) +
+  stat_cor(
+    aes(label = paste(after_stat(r.label))),
+    method = "pearson",
+    label.x.npc = "left",
+    label.y.npc = "top",
+    show.legend = FALSE
+  ) +
+  labs(
+    title = "Correlations between drift rate novel 
+(TRUE-FALSE) and pupil novel",
+    x = "Median drift rate",
+    y = "Median pupil",
+  ) +
+  theme_minimal(base_size = 13)
+
+p3.3 <- p3.1 | p3.2
+
+ggsave("figures/joint_model/point_estimates_drift_rate_tf_pupil_tf.jpeg", height = 10, width = 15)
+```
+
+
+## 7.1 Tier 3 — interaction-contrast correlation (headline)
+
+```{r}
+#| label: tier3-contrast-correlation
+# same contrast definitions as the section 1 ground-truth check:
+# drift_effect  = novel accuracy gap minus learned accuracy gap
+# pupil_effect  = learned accuracy gap minus novel accuracy gap
+alpha_contrasts <- alpha_draws |>
+  mutate(
+    drift_effect_novel = (`behavior|v_SNovel:lMTRUE` - `behavior|v_SNovel:lMFALSE`),
+    drift_effect_learned = (`behavior|v_SLearned:lMTRUE` - `behavior|v_SLearned:lMFALSE`),
+    pupil_effect_novel =(`pupil_mean|novel_true` - `pupil_mean|novel_false`),
+    pupil_effect_learned = (`pupil_mean|learned_true` - `pupil_mean|learned_false`)
+  ) |>
+  select(subjects, draw, drift_effect_novel, drift_effect_learned, pupil_effect_novel, pupil_effect_learned)
+
+# correlate across subjects, separately within each posterior draw.
+# this is the step that propagates estimation uncertainty into the correlation itself.
+contrast_corr_draws_novel <- alpha_contrasts |>
+  group_by(draw) |>
+  summarise(r = cor(drift_effect_novel, pupil_effect_novel), .groups = "drop")
+
+contrast_corr_draws_learned <- alpha_contrasts |>
+  group_by(draw) |>
+  summarise(r = cor(drift_effect_learned, pupil_effect_learned), .groups = "drop")
+
+##Point estimate
+point_estimates_corr_novel <- alpha_contrasts |>
+  select(subjects, draw, drift_effect_novel, pupil_effect_novel) |>
+  group_by(subjects) |>
+  summarise(median_drift = median(drift_effect_novel),
+            mean_pupil = mean(pupil_effect_novel)) |>
+  ungroup() |>
+  mutate(r = cor(median_drift, mean_pupil))
+
+point_estimates_corr_learned <- alpha_contrasts |>
+  select(subjects, draw, drift_effect_learned, pupil_effect_learned) |>
+  group_by(subjects) |>
+  summarise(median_drift = median(drift_effect_learned),
+            mean_pupil = mean(pupil_effect_learned)) |>
+    ungroup() |>
+  mutate(r = cor(median_drift, mean_pupil))
+
+
+##Plot point estimates
+p.4.1 <- ggplot(point_estimates_corr_novel, aes(x = median_drift, y = mean_pupil)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.15) +
+  stat_cor(
+    aes(label = paste(after_stat(r.label))),
+    method = "pearson",
+    label.x.npc = "left",
+    label.y.npc = "top",
+    show.legend = FALSE
+  ) +
+  labs(
+    title = "Novel faces: Correlations between posterior mean 
+pupil size (TRUE-FALSE) and drift rate (TRUE-FALSE)",
+    x = "Median drift rate difference (TRUE-FALSE)",
+    y = "Mean pupil difference (TRUE-FALSE)"
+  ) +
+  theme_minimal(base_size = 13)
+
+p.4.2 <-ggplot(point_estimates_corr_learned, aes(x = median_drift, y = mean_pupil)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.15) +
+  stat_cor(
+    aes(label = paste(after_stat(r.label))),
+    method = "pearson",
+    label.x.npc = "left",
+    label.y.npc = "top",
+    show.legend = FALSE
+  ) +
+  labs(
+    title = "Learned faces: Correlations between posterior mean
+pupil size (TRUE-FALSE) and drift rate (TRUE-FALSE)",
+    x = "Mean drift rate difference (TRUE-FALSE)",
+    y = "Mean pupil difference (TRUE-FALSE)"
+  ) +
+  theme_minimal(base_size = 13)
+
+p.4.3 <- p.4.1 | p.4.2
+ggsave("figures/joint_model/point_estimates_drif_rate_tf_pupil_diff.jpeg", height = 10, width = 15)
+
+
+##Plot contrasts
+p.5.1 <- ggplot(contrast_corr_draws_novel, aes(x = r)) +
+  tidybayes::stat_halfeye(
+    fill = "#0072B2",
+    alpha = 0.7,
+    .width = c(0.66, 0.95)
+  ) +
+  labs(
+    title = "Novel faces: Drift rate (TRUE-FALSE) x Pupil (TRUE-FALSE)",
+    x = "Plausible r (across subjects, within each posterior draw)",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.y = element_blank(), panel.grid.major.y = element_blank())
+
+p.5.2 <- ggplot(contrast_corr_draws_learned, aes(x = r)) +
+  tidybayes::stat_halfeye(
+    fill = "#0072B2",
+    alpha = 0.7,
+    .width = c(0.66, 0.95)
+  ) +
+  labs(
+    title = "Learned faces: Drift rate (TRUE-FALSE) x Pupil (TRUE-FALSE)",
+    x = "Plausible r (across subjects, within each posterior draw)",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.y = element_blank(), panel.grid.major.y = element_blank())
+
+p.5.3 <- p.5.1 | p.5.2
+ggsave("figures/joint_model/contrasts_drif_rate_tf_pupil_diff.jpeg", height = 10, width = 15)
+
+```
+
+
+## Another test: Pupil old/new effect increase
+```{r}
+#| label: tier3-contrast-correlation-test
+# same contrast definitions as the section 1 ground-truth check:
+# drift_effect  = novel accuracy gap minus learned accuracy gap
+# pupil_effect  = learned accuracy gap minus novel accuracy gap
+alpha_contrasts_test <- alpha_draws |>
+  mutate(
+    drift_effect = `behavior|v_SLearned:lMTRUE` - `behavior|v_SNovel:lMTRUE`,
+    pupil_effect = (`pupil_mean|learned_true`- `pupil_mean|novel_true`) 
+  ) |>
+  select(subjects, draw, drift_effect, pupil_effect)
+
+#Point estimates
+point_estimate_old_new <- alpha_contrasts_test |>
+  group_by(subjects) |>
+  summarise(median_drift = median(drift_effect),
+            mean_pupil = mean(pupil_effect)) |>
+  ungroup() |>
+  mutate(r = cor(median_drift, mean_pupil))
+
+#Plot point estimates
+p.6.1 <- ggplot(point_estimate_old_new, aes(x = median_drift, y = mean_pupil)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.15) +
+  stat_cor(
+    aes(label = paste(after_stat(r.label))),
+    method = "pearson",
+    label.x.npc = "left",
+    label.y.npc = "top",
+    show.legend = FALSE
+  ) +
+  labs(
+    title = "Old/new effect",
+    x = "Mean drift rate difference (Learned TRUE-Novel TRUE)",
+    y = "Mean pupil difference (Learned TRUE-Novel TRUE)"
+  ) +
+  theme_minimal(base_size = 13)
+
+# correlate across subjects, separately within each posterior draw.
+# this is the step that propagates estimation uncertainty into the correlation itself.
+contrast_corr_draws_test <- alpha_contrasts_test |>
+  group_by(draw) |>
+  summarise(r = cor(drift_effect, pupil_effect), .groups = "drop")
+
+contrast_corr_summary_test <- contrast_corr_draws_test |>
+  summarise(
+    median = median(r),
+    q025 = quantile(r, .025),
+    q975 = quantile(r, .975)
+  )
+p.6.2 <- ggplot(contrast_corr_draws_test, aes(x = r)) +
+  tidybayes::stat_halfeye(
+    fill = "#0072B2",
+    alpha = 0.7,
+    .width = c(0.66, 0.95)
+  ) +
+  labs(
+    title = "Pupil old/new effect: 
+(Drift rate learned TRUE - Drift rate Novel TRUE) x (Pupil learned TRUE - Pupil novel TRUE)",
+    x = "Plausible r (across subjects, within each posterior draw)",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.y = element_blank(), panel.grid.major.y = element_blank())
+
+p.6.3 <- p.6.1 | p.6.2
+
+ggsave("figures/joint_model/old_new_effect.jpeg", height = 10, width = 15)
+```
+
+
+
+
+
+
+
+## 7.2 Tier 2 — matched same-cell correlations (main text)
+
+```{r}
+#| label: tier2-matched-cells
+# pulled directly from the model's own correlation output (tier 1),
+# not recomputed - this is a subset, not a derived quantity like tier 3.
+matched_pairs <- tribble(
+  ~drift_term                   , ~pupil_term           , ~cell           ,
+  "behavior|v_SLearned:lMTRUE"  , "pupil_mean|learned_true"  , "learned_true"  ,
+  "behavior|v_SLearned:lMFALSE" , "pupil_mean|learned_false" , "learned_false" ,
+  "behavior|v_SNovel:lMTRUE"    , "pupil_mean|novel_true"    , "novel_true"    ,
+  "behavior|v_SNovel:lMFALSE"   , "pupil_mean|novel_false"   , "novel_false"
+)
+
+matched_cell_corrs <- matched_pairs |>
+  rowwise() |>
+  mutate(
+    median = corr_summ[[pupil_term]][drift_term, "50%"],
+    q025 = corr_summ[[pupil_term]][drift_term, "2.5%"],
+    q975 = corr_summ[[pupil_term]][drift_term, "97.5%"]
+  ) |>
+  ungroup()
+
+cat("=== TIER 2: MATCHED SAME-CELL CORRELATIONS ===\n\n")
+print(matched_cell_corrs |> select(cell, median, q025, q975))
+```
+
+```{r}
+#| label: tier2-plot
+ggplot(matched_cell_corrs, aes(x = median, y = fct_rev(cell))) +
+  geom_pointrange(aes(xmin = q025, xmax = q975), color = "#0072B2") +
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  labs(
+    title = "Tier 2: Matched Same-Cell Drift x Pupil Correlations",
+    subtitle = "95% credible intervals, from the joint model's native correlation output",
+    x = "Correlation",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank())
+
+ggsave("figures/joint_model/DriftXPupil_corr.jpeg", height = 10, width = 8)
+```
+
+## 7.3 Tier 1 — full correlation matrix (supplement)
+
+```{r}
+#| label: tier1-full-matrix
+# check the separator EMC2 uses to join parameter-pair column names before
+# trusting the split below - confirmed "." in the original recovery script,
+# but verify against your installed EMC2 version.
+corr_draws_wide <- parameters(joint_fit, selection = "correlation") |>
+  as_tibble()
+cat("=== CORRELATION DRAW COLUMN NAMES (check separator) ===\n")
+print(head(names(corr_draws_wide), 6))
+
+# NOTE: alpha_summ is a list organized BY SUBJECT (names = "1".."30"),
+# corr_summ is a list organized BY PARAMETER (names = the 14 par names).
+# use corr_summ here, not alpha_summ - using the wrong one fails silently,
+# since match() just returns NA rather than erroring, leaving the matrix
+# at its initialized identity values.
+all_pars <- names(corr_summ)
+
+corr_vec_to_matrix <- function(corr_vec, param_names) {
+  n <- length(param_names)
+  mat <- matrix(1, nrow = n, ncol = n)
+  rownames(mat) <- colnames(mat) <- param_names
+  n_filled <- 0
+  for (col_name in names(corr_vec)) {
+    parts <- str_split(col_name, "\\.", n = 2)[[1]]
+    if (length(parts) == 2) {
+      i <- match(parts[1], param_names)
+      j <- match(parts[2], param_names)
+      if (!is.na(i) && !is.na(j)) {
+        mat[i, j] <- mat[j, i] <- corr_vec[[col_name]]
+        n_filled <- n_filled + 1
+      }
+    }
+  }
+  # sanity check: catches a repeat of the all_pars mismatch bug immediately,
+  # instead of silently producing an all-1s matrix again.
+  if (n_filled == 0) {
+    warning(
+      "No off-diagonal correlations were matched - check that param_names ",
+      "matches the names actually used in corr_vec's column labels."
+    )
+  } else {
+    cat(
+      "Filled",
+      n_filled,
+      "off-diagonal correlation pairs (expect",
+      n * (n - 1) / 2,
+      ").\n"
+    )
+  }
+  mat
+}
+
+median_corrs <- corr_draws_wide |>
+  summarise(across(everything(), median))
+
+full_corr_matrix <- corr_vec_to_matrix(median_corrs, all_pars)
+```
+
+```{r}
+#| label: tier1-heatmap
+full_corr_long <- as_tibble(full_corr_matrix, rownames = "param1") |>
+  pivot_longer(-param1, names_to = "param2", values_to = "r")
+
+ggplot(full_corr_long, aes(x = param1, y = param2, fill = r)) +
+  geom_tile() +
+  scale_fill_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B",
+    midpoint = 0,
+    limits = c(-1, 1)
+  ) +
+  labs(
+    title = "Tier 1: Full 14x14 Posterior Median Correlation Matrix",
+    x = NULL,
+    y = NULL,
+    fill = "r"
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("figures/tier1_full_corr_matrix.jpeg", width = 10, height = 9)
+```
+
+Tier 1 is for the supplement, in full, without commentary on individual off-diagonal entries beyond the ones already discussed in tiers 2 and 3 - most of these 91 correlations were never part of the hypothesis space (e.g. `t0` x `pupil|sd`) and, on a short smoke-test fit especially, will have wide and largely uninformative intervals.
+

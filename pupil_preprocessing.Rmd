@@ -1,0 +1,324 @@
+---
+title: "Pupil preprocessing - data from both eyes"
+author: "Rich"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: united
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Install pupillometry package
+```{r install-pkg, results=F, message=F, warning=F}
+#install.packages("remotes")
+
+#remotes::install_github("dr-jt/pupillometry")
+```
+
+
+
+# 1. load packages and custom functions plus adjust settings #
+
+## packages ##
+
+```{r load-pkg, results=F, message=F, warning=F}
+pkg <- c("pupillometry", "tidyverse", "here", "patchwork", "future", "RColorBrewer",
+         "parallel", "here", "readxl", "writexl") 
+
+lapply(pkg, library, character.only = TRUE)
+```
+
+## custom functions ##
+
+```{r functions}
+source(here("custom_functions", "preprocess_both_updated-4-2.r"))
+source(here("custom_functions", "parameter_tests_both.r"))  
+source(here("custom_functions", "settings.r"))
+```
+
+## check multicore settings ##
+
+```{r settings}
+plan(multicore)
+message(paste("Supporting multicore:", supportsMulticore()))
+message(paste("Available cores:", detectCores()))
+```
+
+# 2. read in the data #
+
+## read data and add required columns ##
+
+```{r pupil-read, results=T, message=F, warnings=F}
+raw_data_cols <- read_csv(here("data","pupil_data", "raw", "all_participants_long_format_n34.csv"), 
+                          n_max = 0) %>%
+  colnames()
+
+# Find columns to include
+already_specified <- c("time", "pupil", "subject", "trial", "block")
+cols_to_include <- setdiff(raw_data_cols, already_specified)
+
+## read in
+pupil_data_both <- pupil_read(
+  file = here("data","pupil_data", "raw", "all_participants_long_format_n34.csv"),
+  eyetracker = "",
+  eye_use = NULL, ## NULL is the default and it keeps both eyes
+  time = "time",
+  left_pupil.mm = "pupil_left",
+  right_pupil.mm = "pupil_right",
+  left_gaze.x = "x_pos_left",
+  left_gaze.y = "y_pos_left",
+  right_gaze.x = "x_pos_right",
+  right_gaze.y = "y_pos_right",
+  subject = "subject",
+  trial = "trial",
+  delim = ",",
+  message_event = "message",  ## event info stored in this column
+  include_col = cols_to_include) 
+pupil_data_both <- pupil_data_both %>%
+  mutate(block = case_when(
+    Trial >= 1   & Trial <= 60  ~ 1,
+    Trial >= 61  & Trial <= 120 ~ 2,
+    Trial >= 121 & Trial <= 180 ~ 3
+  ))
+head(pupil_data_both)
+summary(pupil_data_both)
+
+write_csv(pupil_data_both, here("data","pupil_data", "raw", "raw_data_pupil.csv"))
+```
+
+Align time
+```{r}
+pupil_data_both_aligned <- pupil_data_both %>%
+  group_by(Subject, Trial) %>%
+  mutate(
+    t0   = Time[Stimulus == "target"][1],   # Time of first "target" row
+    Time = Time - t0                         # Subtract t0 from all rows
+  ) %>%
+  select(-t0) %>%                            # Drop the helper column
+  ungroup()
+```
+
+
+
+Check baseline
+```{r}
+check_baseline <- pupil_data_both_aligned %>%
+  filter(Stimulus == "fixation_baseline",
+         Time > -200 & Time < 0) %>%
+  group_by(Subject,condition) %>%
+  summarise(mean_baseline = mean((`L_Pupil_Diameter.mm` +`R_Pupil_Diameter.mm`)/2, na.rm = TRUE))
+```
+
+
+Plot raw data
+1 trial/pid
+```{r}
+trial_1 <- pupil_data_both_aligned %>%
+  filter(Trial == "56",
+         Subject == "001")
+
+p3.1 <- ggplot(trial_1,
+               aes(x = Time, y = (`L_Pupil_Diameter.mm` +`R_Pupil_Diameter.mm`)/2)) +
+  geom_line(alpha = 1, linewidth = 1) +
+  facet_wrap(~Subject, ncol=5) +
+  ylab("Raw pupil (mm)") +
+  xlab("Time") +
+  xlim(-1000, 2500)
+p3.1
+ggsave("figures/raw_data_trial_58.jpeg",
+       width = 18, height = 10, dpi = 800)
+```
+
+This gives a warning about parsing issues, but the column types seem correct to me.
+So I think this can be safely ignored.
+I leave the warning in just for folks who might use other datasets where it could be helpful.
+
+# 3. preprocess #
+
+I created a new function to apply preprocessing to both eyes and then combine them at some point.
+preprocess_and_visualize_both()
+
+## set parameters ## 
+
+```{r params}
+custom_params <- list(
+  deblink = list(extend = 75),
+  artifact = list(n = 8),
+  missing = list(missing_allowed_baseline = .20,
+                 missing_allowed_stimulus = .20),
+  upsample = list(),
+  smooth = list(type = "butterworth", cutoff_hz = 6, order = 4),
+  interpolate = list(type = "linear", maxgap = 1000, hz = 1000),
+  baseline = list(bc_onset_message = "target", baseline_duration = 200, 
+                  type = "subtractive")
+)
+```
+
+## run preprocessing ## 
+
+```{r preprocess, eval=F}
+results_both <- preprocess_and_visualize_both(
+  pupil_data = pupil_data_both_aligned,
+  plot_dir = here("figures", "preprocessing", "both_eyes", "data"),
+  output_dir = here("data", "pupil_data", "processed", "data"),
+  params = custom_params,
+  save_intermediate_data = FALSE,
+  save_individual_plots = FALSE,
+  return_all_steps = TRUE,
+  apply_gaze_corr = TRUE,
+  gaze_per_trial = TRUE,
+  bin_length = 20, #downsampling to 50HZ -> 20ms bins
+  smooth_then_interp = FALSE,
+  units = "mm"
+)
+```
+
+
+## preprocessing output ##
+
+By default, the preprocessing script produces a bunch of figures and data, as follows:
+
+In the plot directory, it produces:
+
+- a subdirectory per participant
+- a plot per trial, which summarises the preprocessing steps with one panel per processing step.
+
+An example of subject 1, trial 3 is shown below.
+
+```{r plot-preprocess, echo=F, fig.cap = "example preprocessing summary plot for both eyes and 1 trial"}
+knitr::include_graphics("figures/preprocessing/both_eyes/sim/S11/S11_T3_all_steps.png")
+```
+
+In the data directory, it produces:
+
+- a processed data file for each subject and a combined file for all subjects
+- a binned data file for each subject and a combined file for all subjects
+
+# 4. parameter tests #
+
+```{r param-test, eval=F}
+smooth_combinations <- list(
+  list(type = "mwa", n = 10),
+  list(type = "mwa", n = 50),
+  list(type = "mwa", n = 100),
+  list(type = "mwa", n = 200)
+)
+
+smooth_results_both <- test_parameter_combinations_both(
+  step_data = results_both,  # From your preprocessing
+  param_combinations = smooth_combinations,
+  processing_function = "pupil_smooth",
+  input_step = "upsample_data",  # Step to use as input
+  plot_dir = here("figures", "parameter_tests", "both_eyes", "sim", "smooth"),
+  output_dir = here("data", "parameter_tests", "both_eyes", "sim", "smooth"),
+  save_param_data = FALSE
+)
+```
+
+## parameter test output ##
+
+An example of subject 1, trial 3 is shown below.
+
+```{r plot-param-test, echo=F, fig.cap = "example parameter tests plot for both eyes and 1 trial"}
+knitr::include_graphics("figures/parameter_tests/both_eyes/sim/smooth/S1/S1_T3_pupil_smooth_params.png")
+```
+
+# 5. test arbitrary units with both eyes #
+
+## create the data ##
+
+read in data and create pretend left and right data (i.e., duplicate the existing data just to test that the preprocessing pipeline works with two eyes and arbitrary units).
+
+```{r read-gazer-data, message=F}
+gazer_data <- read_csv("data/gazer/gazer_data.csv")
+# head(gazer_data)
+```
+
+duplicate
+
+```{r wrangle-gazer, message=F}
+gazer_data_both <- gazer_data %>% 
+  rename(pupil_left = pupil, x_pos_left = x, y_pos_left = y) %>% 
+  mutate(pupil_right = pupil_left + 20, x_pos_right = x_pos_left + 20, y_pos_right = y_pos_left) 
+head(gazer_data_both)
+
+write_csv(gazer_data_both, "data/gazer/gazer_data_both.csv")
+```
+
+## read data with pupil_read() and add required columns ##
+
+```{r pupil-read-gazer, results=T, message=F, warnings=F}
+gazer_data_cols <- read_csv("data/gazer/gazer_data_both.csv", 
+                          n_max = 0) %>%
+  colnames()
+
+# Find columns to include
+already_specified <- c("time", "pupil", "subject", "trial")
+cols_to_include <- setdiff(raw_data_cols, already_specified)
+
+## read in
+gazer_pupil_data_both <- pupil_read(
+  file = here("data", "gazer", "gazer_data_both.csv"),
+  eyetracker = "",
+  eye_use = NULL, ## NULL is the default and it keeps both eyes
+  time = "time",
+  left_pupil.px = "pupil_left",
+  right_pupil.px = "pupil_right",
+  left_gaze.x = "x_pos_left",
+  left_gaze.y = "y_pos_left",
+  right_gaze.x = "x_pos_right",
+  right_gaze.y = "y_pos_right",
+  subject = "subject",
+  trial = "trial",
+  delim = ",",
+  message_event = "message",  ## event info stored in this column
+  include_col = cols_to_include
+)
+head(gazer_pupil_data_both)
+```
+
+## set parameters ## 
+
+```{r params-gazer}
+custom_params <- list(
+  deblink = list(extend = 75),
+  artifact = list(n = 8),
+  missing = list(missing_allowed = .90),
+  upsample = list(),
+  smooth = list(type = "hann", n = 50),
+  interpolate = list(type = "cubic-spline", maxgap = 500, hz = 1000),
+  baseline = list(bc_onset_message = "target", baseline_duration = 100, 
+                  type = "subtractive")
+)
+```
+
+## run preprocessing ## 
+
+```{r preprocess-gazer, eval=F}
+results_both_au <- preprocess_and_visualize_both(
+  pupil_data = gazer_pupil_data_both,
+  plot_dir = here("figures", "preprocessing", "both_eyes", "real"),
+  output_dir = here("data", "preprocessing", "both_eyes", "real"),
+  params = custom_params,
+  save_intermediate_data = FALSE,
+  save_individual_plots = FALSE,
+  return_all_steps = TRUE,
+  bin_length = 200,
+  smooth_then_interp = TRUE,
+  units = "px"
+)
+```
+
+## preprocessing output ##
+
+```{r plot-preprocess-au, echo=F, fig.cap = "example preprocessing summary plot for both eyes and 1 trial with arbitrary units"}
+knitr::include_graphics("figures/preprocessing/both_eyes/real/S11/S11_T2_all_steps.png")
+```

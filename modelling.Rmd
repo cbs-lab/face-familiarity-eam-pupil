@@ -1,0 +1,222 @@
+---
+title: "modelling"
+author: "Fournier Raphaël"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load the libraries that we will be using
+
+## load packages
+
+```{r load-pkg}
+pkxg <- c("EMC2", "tidyverse", "RColorBrewer", "patchwork", "here", "future", "parallel")
+
+lapply(pkxg, library, character.only = TRUE)
+```
+
+## plot settings
+
+theme settings for ggplot
+
+```{r, eval = F}
+theme_set(
+  theme_bw() +
+    theme(text = element_text(size = 18, face="bold"), 
+          title = element_text(size = 18, face="bold"),
+          legend.position = "bottom")
+)
+
+## Set the amount of dodge in figures
+pd <- position_dodge(0.7)
+pd2 <- position_dodge(1)
+```
+
+# 1. read in the raw data and wrangle
+
+## read in the wrangled data
+
+Load data (30 pids)
+
+```{r}
+raw <- read_csv(here("data", "data_WP3_model.csv"))
+head(raw)
+str(raw)
+
+options(mc.cores = parallel::detectCores(),
+        future.fork.enable = TRUE,
+        future.rng.onMisuse = "ignore") ## automatically set in RStudio
+
+supportsMulticore()
+
+detectCores()
+
+plan(multicore)
+```
+
+#Wrangle
+
+```{r}
+data_emc <- raw %>%
+  select(pid, cond, acc, rt) %>% 
+  rename(subjects = pid, S = cond, R = acc) %>% 
+  mutate(subjects=factor(subjects),
+         S=factor(S,
+                  levels = c("Novel", "Learned")),
+         R=case_when(
+           R == "1" & S == "Novel" ~ "Novel",
+           R == "1" & S == "Learned" ~ "Learned",
+           R == "0" & S == "Novel" ~ "Learned",
+           R == "0" & S == "Learned" ~ "Novel"),
+         R=factor(R,
+                  levels = c("Novel", "Learned"))) %>% 
+  as.data.frame() ## in DMC, post predict need a df and not a tibble. Same for EMC2 I think.
+head(data_emc)
+str(data_emc)
+```
+
+# 2. build model
+
+# 2.1 Prergistered model
+
+## set the match factor
+
+```{r}
+matchfun=function(d)d$S==d$lR
+```
+
+```{r}
+design_model_wp3 <- design(data = data_emc,model=LBA,matchfun=matchfun,
+                       formula=list(v~0+S:lM,sv~0+lM,B~0+lR,A~1,t0~1),
+                       constants=c(sv_lMFALSE=log(1)))
+```
+
+```{r}
+p_vector <- c("v_SNovel:lMFALSE"=4,"v_SLearned:lMFALSE"=4, "v_SNovel:lMTRUE"=4, "v_SLearned:lMTRUE"=4,
+              sv_lMTRUE=log(.5), 
+              B_lRNovel=log(2), B_lRLearned=log(2),
+              A=log(.5),t0=log(.3))
+
+mapped_pars(p_vector, x=design_model_wp3)
+```
+
+## set priors
+
+try to copy dmc priors.
+
+I made the A and t0 sd priors smaller as they are fixed values and it seemed odd to sample a wide range when they are fixed at .5 and .3, respectively.
+
+```{r}
+mu_mean=c(`v_SNovel:lMFALSE`=0,`v_SLearned:lMFALSE`=0, `v_SNovel:lMTRUE`=1, `v_SLearned:lMTRUE`=1,
+          sv_lMTRUE=log(.5), 
+          B_lRNovel=log(1), B_lRLearned=log(1),
+          A=log(.5),t0=log(.3))
+
+mu_sd=c(`v_SNovel:lMFALSE`=2,`v_SLearned:lMFALSE`=2, `v_SNovel:lMTRUE`=2, `v_SLearned:lMTRUE`=2,
+          sv_lMTRUE=.5, 
+          B_lRNovel=.5, B_lRLearned=.5,
+          A=.3,t0=.3)
+
+prior_wp3 <- prior(design_model_wp3, type ='standard',pmean=mu_mean,psd=mu_sd)
+
+plot(x = prior_wp3,layout=c(3,3))
+```
+
+## fit the model
+
+
+
+
+```{r}
+LBA_WP3 <- make_emc(data_emc,design_model_wp3,type="standard",  prior=prior_wp3, compress = TRUE)
+LBA_WP3 <- fit(LBA_WP3, cores_per_chain = 1, cores_for_chains = 1, fileName="models/tmp.RData",iter = 5000, verbose = TRUE, step_size = 100)
+save(LBA_WP3,file="models/LBA_WP3.RData") 
+load("models/LBA_WP3.RData")
+```
+
+# check the model
+
+convergence efficiency?
+
+```{r}
+check(LBA_WP3)
+get_pars(LBA_WP3, map = TRUE)
+```
+
+plot pars
+
+```{r}
+plot_pars(LBA_WP3,selection="mu",layout=c(2,5))
+```
+
+# calculate and plot posterior predictions
+
+```{r}
+pp_LBA_WP3 <- predict(LBA_WP3, n_cores = 10)
+save(pp_LBA_WP3,file="models/pp_LBA_WP3.RData")
+```
+
+```{r}
+load("models/pp_LBA_WP3.RData")
+```
+
+
+## 2.3 Check model
+
+```{r}
+#| label: check
+
+check(LBA_WP3)
+summary(LBA_WP3)
+
+## save out as necessary
+png("figures/lba/chains.png", width = 8, height = 6, units = "in", res = 150)
+plot(
+  LBA_WP3,
+  selection = "mu",
+  layout = c(3, 3)
+)
+dev.off()
+
+```
+
+```{r}
+#| label: plot-pars
+
+plot_pars(LBA_WP3, selection = "mu", layout = c(3, 3))
+
+## save out as necessary
+png("figures/lba/pars.png", width = 8, height = 6, units = "in", res = 300)
+plot_pars(
+  LBA_WP3,
+  selection = "mu",
+  layout = c(3, 3)
+)
+dev.off()
+```
+
+
+```{r}
+#| label: plot-fit
+
+png("figures/pp_density.png", width = 8, height = 6, units = "in", res = 150)
+plot_density(
+  data_emc, 
+  pp_LBA_WP3, 
+  factors = "S"
+)
+dev.off()
+
+png("figures/pp_cdf.png", width = 8, height = 6, units = "in", res = 150)
+plot_cdf(
+  data_emc,
+  pp_LBA_WP3,  
+  factors = "S"
+)
+dev.off()
+```
+
