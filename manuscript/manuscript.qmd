@@ -135,15 +135,15 @@ knitr::opts_chunk$set(echo = FALSE)
 theme_manuscript <- function(base_size = 10) {
   theme_classic(base_size = base_size) +
     theme(
-      axis.title       = element_text(face = "bold"),
-      axis.text        = element_text(colour = "black"),
+      axis.title = element_text(face = "bold"),
+      axis.text = element_text(colour = "black"),
       strip.background = element_blank(),
-      strip.text       = element_text(face = "bold", size = rel(1)),
-      strip.placement  = "outside",
-      legend.position  = "bottom",
-      legend.title     = element_text(face = "bold"),
-      plot.title       = element_text(face = "bold", size = rel(1)),
-      plot.margin      = margin(5, 10, 5, 5)
+      strip.text = element_text(face = "bold", size = rel(1)),
+      strip.placement = "outside",
+      legend.position = "bottom",
+      legend.title = element_text(face = "bold"),
+      plot.title = element_text(face = "bold", size = rel(1)),
+      plot.margin = margin(5, 10, 5, 5)
     )
 }
 theme_set(theme_manuscript())
@@ -194,13 +194,13 @@ pd2 <- position_dodge(1)
 
 # Introduction
 
-Over the last two decades, pupillometry has become an increasingly popular tool for accessing cognitive processing non-invasively and with high temporal resolution. Pupil size has been linked to a range of cognitive processes, including attention [@Binda2014; @Naber2013; @WangMunoz2015], emotional arousal [@Bradley2008], decision-making [@Murphy2014; @Urai2017], and recognition memory [@GoldingerPapesh2012; @Otero2011]. In recognition memory specifically, a well-documented pattern is the "pupil old/new effect": a greater pupil dilation for the correct recognition of "old" items than for the correct rejection of "new" items, taken to reflect an association between pupil dynamics and memory strength [@Otero2011; @Vo2008; see @Lapteva2024, for a meta-analysis]. In this study, we propose a computational approach to investigating the association between face recognition memory and pupil dynamics. Specifically, we link the latent parameters of an evidence-accumulation model to pupil dynamics during a face recognition task.
+Over the last two decades, pupillometry has become an increasingly popular tool for accessing cognitive processing non-invasively and with high temporal resolution. Pupil size has been linked to a range of cognitive processes, including attention [@Binda2014; @Naber2013; @WangMunoz2015], emotional arousal [@Bradley2008], decision-making [@Murphy2014; @Urai2017], and recognition memory [@GoldingerPapesh2012; @Otero2011]. In recognition memory specifically, a well-documented pattern is the "pupil old/new effect": a greater pupil dilation for the correct recognition of "old" items than for the correct rejection of "new" items, taken to reflect an association between pupil dynamics and memory strength [@Otero2011; @Vo2008; see @Lapteva2024, for a meta-analysis]. In this study, we use a computational modelling approach to investigating the association between face recognition memory and pupil dynamics. Specifically, we link the latent parameters of an evidence-accumulation model to pupil dynamics during a face recognition task.
 
 The pupil old/new effect is a well-documented observation in recognition memory experiments using pupillometry. It refers to a larger pupil dilation for correctly recognised "old" stimuli than for correctly rejected "new" stimuli [@Vo2008; @HeaverHutton2011]. This difference has been proposed to index the strength of the memory trace [@Otero2011], and it is larger when recognition relies on recollection (retrieving specific contextual details of the earlier encounter) rather than familiarity (a sense of having encountered the item before without retrieving such details) [@KafkasMontaldi2015; @TaikhBodner2022]. The effect also extends to false memories. New items wrongly judged "old" elicit larger dilation than correct rejections, though smaller than hits [@Otero2011; @Montefinese2013; @BrocherGraf2016]. This suggests that the participant's subjective judgement of a stimulus as "old" is enough to evoke a stronger pupillary response, regardless of accuracy. Two main explanations have been offered. Early accounts attributed the effect to the greater cognitive effort involved in retrieving an episodic memory [@Vo2008; @GoldingerPapesh2012]. More recent work instead proposes that recognising an item acts as a salient signal that triggers an attentional orienting response. In line with this account, the effect is larger when participants expect a test item to be new but then recognise it as old [@Mill2016].
 
 Pupillometric studies of face recognition remain scarce, but several findings suggest that pupil size is sensitive to face memory. When faces are learned during an experiment, prior exposure modulates pupil responses at test, and these effects appear for both own- and other-race faces [@Goldinger2009; @Wu2012]. Pupil dilation during encoding also predicts later recognition of faces [@CroninLippMarinovic2023]. In eyewitness lineups, participants who correctly identify the culprit show larger pupils for the target than for fillers, sometimes even when they are unsure of their choice, which points to covert recognition [@ElphickPikeHole2020]. Pre-experimentally familiar faces produce a similar pattern: familiar faces reduce the initial constriction and increase dilation relative to unknown faces, most strongly for one's own face [@Schwetlick2025]. This familiarity response survives perceptual suppression that abolishes overt recognition [@MejiaValdesSosaBobes2024] and appears for personally familiar faces presented in rapid serial streams [@Chen2026]. However, not all studies agree. One study found smaller dilations for more familiar faces, but only during an active task, suggesting that task demands shape the direction of the effect [@MatyjekBayerDziobek2021]. 
 
-The pupil old/new effect has typically been examined by sorting pupil responses according to response accuracy (hits, misses, false alarms and correct rejections). This approach overlooks a second, equally informative aspect of performance: response times. Considering accuracy or response times in isolation can lead to misleading conclusions about the underlying cognitive processes. For example, older adults are slower than younger adults in recognition memory but almost equally accurate, and modelling both measures jointly showed that this slowing reflected more cautious responding and slower non-decisional processing rather than weaker memory evidence [@Ratcliff2004]. Evidence-accumulation models offer a principled solution to this problem [@Ratcliff1978; @BrownHeathcote2008]. They assume that decisions arise from the accumulation of evidence until a response threshold is reached, and they decompose choices and full response time distributions into latent components: the rate of evidence accumulation (drift rate), the amount of evidence required to respond (threshold), response bias, and non-decision time (see @fig-LBA). Linking pupil size to these parameters, rather than to raw accuracy categories, can therefore specify which decision process pupil dilation reflects. Previous work has already related pupil dilation to decision thresholds [@Cavanagh2014], to reduced choice bias in evidence accumulation [@deGee2014, @deGee2017], including in memory-based decisions [@deGee2020], and to urgency signals [@Murphy2016]. However, these associations have not yet been tested in face recognition, a domain in which the effects of familiarity on decision processes have been characterized behaviorally [@fournier2026familiarity], but not yet linked to pupil dynamics.
+The pupil old/new effect has typically been examined by sorting pupil responses according to response accuracy (hits, misses, false alarms and correct rejections). This approach overlooks a second, equally informative aspect of performance: response times. Considering accuracy or response times in isolation can lead to misleading conclusions about the underlying cognitive processes [REF Wagnemakers]. Evidence-accumulation models offer a principled solution to this problem [@Ratcliff1978; @BrownHeathcote2008]. They assume that decisions arise from the accumulation of evidence until a response threshold is reached, and they decompose choices and full response time distributions into latent components: the rate of evidence accumulation (drift rate), the amount of evidence required to respond (threshold), response bias, and non-decision time (see @fig-LBA). Linking pupil size to these parameters, rather than to raw accuracy categories, can therefore specify which decision process pupil dilation reflects. Previous work has already related pupil dilation to decision thresholds [@Cavanagh2014], to reduced choice bias in evidence accumulation [@deGee2014, @deGee2017], including in memory-based decisions [@deGee2020], and to urgency signals [@Murphy2016]. However, these associations have not yet been tested in face recognition, a domain in which the effects of familiarity on decision processes have been characterized behaviorally [@fournier2026familiarity], but not yet linked to pupil dynamics.
 
 
 :::: {.place arguments="bottom, scope: \"parent\", float: true"}
@@ -211,9 +211,9 @@ The pupil old/new effect has typically been examined by sorting pupil responses 
 *This diagram represents the accumulation process one trial of a perceptual decision task for the linear ballistic accumulator (LBA;* @BrownHeathcote2008*). Participants are required to chose between two options (Response 1 and Response 2). In a LBA model, there is a separated accumulation of evidence (v) for each response option. In this example, the correct response is Response 1. The accumulator on the left is the accumulator for the correct response (Response 1), and the green line in represents the rate at which the evidence accumulates in favor of that response option. The accumulator on the right is the accumulator for the incorrect response (Response 2), and the dash red line represents the rate at which the evidence accumulates in favor of this response option. Once the accumulated evidence crosses the threshold (b) of a response option, the corresponding response is chosen (in this case Response 1).* 
 ::::
 
-In the present study, therefore, we combined pupillometry with computational models to investigate how latent computational processes in face recognition are related to pupil size dynamics. We previously investigated the extent to which drift rate and threshold are associated with pupil size dynamics for old (learned) and new (novel) faces [@fournier2026familiarity]. Using an old/new recognition task in combination with evidence accumulation modelling, we found that novel compared to familiar faces induced a greater accumulation of evidence (drift rate), as well as modest increase in response caution (threshold). Given these past results, the present study had two aims. First, we sought to replicate the pupil old/new effect, which is well established for other stimuli, using faces. Second, we examined how pupil dynamics relate to the latent processes underlying face recognition decisions. Specifically, we asked whether the quality of evidence accumulation (drift rate) and response caution (threshold) estimated form a face recognition task were associated with three pupil metrics: mean pupil size, peak pupil size, and the rate of pupil change.
+In the present study, therefore, we combined pupillometry with computational modelling to investigate how latent computational processes in face recognition are related to pupil size dynamics. We previously investigated the extent to which drift rate and threshold are associated with pupil size dynamics for old (learned) and new (novel) faces [@fournier2026familiarity]. Using an old/new recognition task in combination with evidence accumulation modelling, we found that novel compared to familiar faces induced a greater accumulation of evidence (drift rate), as well as modest increase in response caution (threshold). Given these past results, the present study had two aims. First, we sought to establish the pupil old/new effect in the context of face recognition memory. Second, we examined how pupil dynamics relate to the latent processes underlying face recognition decisions. Specifically, we asked whether the quality of evidence accumulation (drift rate) and response caution (threshold) estimated form a face recognition task were associated with three pupil metrics: mean pupil size, peak pupil size, and the rate of pupil change.
 
-Based on previous literature, we expected to observe a pupil old/new effect for faces. On correct trials, pupil size should be larger for correctly recognized learned faces (hits) than for correctly rejected novel faces (correct rejections). On incorrect trials, we expected this pattern to invert. Because the pupil response tracks the participant's judgement that an item is "old" rather than the item's true status [@KafkasMontaldi2015; @Montefinese2013; @Oliveira2021; @Otero2011], pupil size should be larger for novel faces wrongly judged as learned (false alarms) than for learned faces wrongly judged as novel (misses).  Finally, we expected individuals with larger pupil-size differences between conditions to also show larger differences in drift rate and/or threshold. Drift rate for learned faces should positively correlate with pupil whereas the answer is less clear for drift rate for novel faces or for threshold.
+Based on previous memory recognition studies, we expected to observe a pupil old/new effect for faces. On correct trials, pupil size should be larger for correctly recognized learned faces (hits) than for correctly rejected novel faces (correct rejections). On incorrect trials, we expected this pattern to invert. Because the pupil response tracks the participant's judgement that an item is "old" rather than the item's true status [@KafkasMontaldi2015; @Montefinese2013; @Oliveira2021; @Otero2011], pupil size should be larger for novel faces wrongly judged as learned (false alarms) than for learned faces wrongly judged as novel (misses).  Finally, we expected individuals with larger pupil-size differences between conditions to also show larger differences in drift rate and/or threshold. Drift rate for learned faces should positively correlate with pupil whereas the predictions are less clear for drift rate for novel faces or for threshold.
 
 # Method and Materials
 
@@ -240,8 +240,9 @@ exclude_missed_trials <- as.integer(exclusions$n_removed[
 ])
 exclude_rt <- as.integer(exclusions$n_removed[exclusions$stage == "2"])
 exclude_acc <- as.integer(exclusions$n_removed[exclusions$stage == "3a"])
-exclude_pupil = 1
-final <- as.integer(exclusions$n_remain[exclusions$stage == "3a"]) - exclude_pupil
+exclude_pupil <- 1
+final <- as.integer(exclusions$n_remain[exclusions$stage == "3a"]) -
+  exclude_pupil
 ```
 
 ```{r}
@@ -295,7 +296,7 @@ To assess if there was important variation in the difference between the luminou
 
 ## Pupil preprocessing and pupil metrics
 
-Pupil data was only collected during the recognition part of the experiment. Each participant underwent a 5-points calibration phase during the break in between the familiarization and the recognition part. Samples identified as blinks were set to NA. The blink window was extended by 75 ms on each side of the sample to remove partial blinks artifacts (i.e. lid drooping and reopening) that surrounds the “true” blink. Pupil samples that deviated more than 8 median absolute deviations from the median are set to NA. This preprocessing stage was run twice in sequence, where the second pass caught artefacts that were masked by larger ones in the first pass. Regarding NA samples, each trial was then evaluated separately for the baseline and the stimulus windows. A trial was discarded if more that 20% of the samples were NA in the baseline period (set to 200ms before the target onset) or in the stimulus period (from target onset to target offset; @MathotVilotijevic2022). The pupil data were then upsampled to a uniform time grid at 1000Hz sampling rate to ensure equally-spaces samples before interpolation and smoothing. Remaining NA samples were linearly interpolated. Finally, a zero-phase 4th-order Butterworth low-pass filter with a 6 Hz cutoff was applied to remove higher frequencies while keeping slower pupil responses. After interpolation, the pupil data was downsampled to 50 Hz to reduce the risk of autocorrelation in time-series analyses [@VanRij2019].
+Pupil data was only collected during the recognition part of the experiment. Each participant underwent a 5-point calibration phase during the break in between the familiarization and the recognition part. Samples identified as blinks were set to NA. The blink window was extended by 75 ms on each side of the sample to remove partial blinks artifacts (i.e. lid drooping and reopening) that surrounds the “true” blink. Pupil samples that deviated more than 8 median absolute deviations from the median are set to NA. This preprocessing stage was run twice in sequence, where the second pass caught artefacts that were masked by larger ones in the first pass. Regarding NA samples, each trial was then evaluated separately for the baseline and the stimulus windows. A trial was discarded if more that 20% of the samples were NA in the baseline period (set to 200ms before the target onset) or in the stimulus period (from target onset to target offset; @MathotVilotijevic2022). The pupil data were then upsampled to a uniform time grid at 1000Hz sampling rate to ensure equally-spaces samples before interpolation and smoothing. Remaining NA samples were linearly interpolated. Finally, a zero-phase 4th-order Butterworth low-pass filter with a 6 Hz cutoff was applied to remove higher frequencies while keeping slower pupil responses. After interpolation, the pupil data were downsampled to 50 Hz to reduce the risk of autocorrelation in time-series analyses [@VanRij2019].
 
 Pupil data was baseline corrected using a subtractive correction [@MathotVilotijevic2022], meaning that we subtracted the mean pupil size of the 200ms period before the stimulus onset from every pupil size sample during the stimulus presentation, for both left and right pupil size. The left and right eye signals were then averaged sample-by-sample into a single mean pupil trace. We discarded the pupil data from the last 100ms of the stimulus presentation (from 2400 to 2500ms) to ensure data quality.
 
@@ -309,7 +310,7 @@ From the pupil traces, three different pupil metrics were extracted: the mean pu
 
 ## Evidence accumulation modeling
 
-Model and priors specifications as well as the model estimation are identical to the ones described in @fournier2026familiarity. Specifications of the priors are described in Supplementary Materials.
+Model and prior specifications, as well as the model estimation procedures, are identical to the ones described in @fournier2026familiarity. Specifications of the priors are described in Supplementary Materials.
 
 ### Model specifications
 
@@ -366,21 +367,22 @@ Convergence plots and posterior predictive checks can be found in Supplementary 
 
 ### Overview of the general analytical strategy
 
-First, LBA parameters were estimated and distributions contrasts between conditions of interest were computed to ensure that we replicated the results found in @fournier2026familiarity. Second, a hierarchical generalized additive mixed model (HGAMM; @VanRij2019, @Pederson2019) was fitted to the pupil data in order to investigate the pupil old/new effect. We also used a Bayesian multilevel mixed model to compare pupil metrics (mean pupil size, maximum pupil size and rate of pupil change) between stimulus conditions (Learned vs Novel) and accuracy conditions (correct trials vs incorrect trials).
-Regarding the associations between pupil size metrics and LBA parameters, we used correlations and data visualizations to characterize the zero-order relationships between parameters of interest (drift rate and threshold) from the LBA model with pupil size metrics. A "classical" correlation approach to generate point estimates of the correlation value and present those alongside scatter plots, as well as a Bayesian plausible value correlation approach to estimate the uncertainty in the estimated correlation values.
-Finally, as an exploratory analysis, we fitted a hierarchical Bayesian joint-model combining a Linear Ballistic Accumulator (LBA) model of response times and accuracy with mean pupil size. 
+First, the posterior distributions of LBA parameters were estimated and contrasts between conditions of interest were computed to ensure that we replicated the results found in @fournier2026familiarity. Second, a hierarchical generalized additive mixed model (HGAMM; @VanRij2019; @Pederson2019) was fitted to the pupil data in order to investigate the pupil old/new effect. We also used a Bayesian multilevel mixed model to compare pupil metrics (mean pupil size, maximum pupil size and rate of pupil change) between stimulus conditions (Learned vs Novel) and accuracy conditions (correct trials vs incorrect trials).
+
+Third, regarding the associations between pupil size metrics and LBA parameters, we used correlations and data visualizations to characterize the zero-order relationships between parameters of interest (drift rate and threshold) from the LBA model with pupil size metrics. A "classical" correlation approach to generate point estimates of the correlation value and present those alongside scatter plots, as well as a Bayesian plausible value correlation approach to estimate the uncertainty in the estimated correlation values.
+Finally, in an exploratory analysis, we fitted a hierarchical Bayesian joint-model combining a Linear Ballistic Accumulator (LBA) model of response times and accuracy with mean pupil size. 
 The details of the analysis plan were preregistered (<https://osf.io/abpdy/overview>) and more specific details are presented below.
 
 ### LBA parameters
 
-In order to make inference about the potential associations between LBA parameters and pupil size metrics, subject specific estimates and group estimates posterior distributions were computed.
-Group estimates were contrasted across conditions (Learned vs Novel) to establish that the basic experimental effect found in @fournier2026familiarity is replicate at the group level.
+In order to make inferences about the potential associations between LBA parameters and pupil size metrics, subject specific estimates and group estimates posterior distributions were computed.
+Group estimates were contrasted between conditions (Learned vs Novel) to establish that the basic experimental effect found in @fournier2026familiarity could be replicated at the group level.
 To summarize the distribution of parameters of interest, we report the median of the posterior distribution together with 95% quantile interval of the posterior distribution.
 Assessment of the associations between parameter estimates and pupil size metrics was pursued using subject specific estimates.
 
 ### Hierarchical generalized additive mixed model (HGAMM)
 
-To test whether the time course of pupil dilation differed between conditions, we analysed the pupil traces with a hierarchical generalised additive mixed model (HGAMM; @Wood2011; @Wood2017; @Pedersen2019), an approach that has been applied successfully to pupillometric data [@VanRij2019]. GAMMs are well suited to pupil data for three reasons. First, the pupil response follows a nonlinear time course whose shape is not known in advance. GAMMs estimate this shape directly from the data using smooth functions (splines), and a penalty on the wiggliness of each smooth guards against overfitting. Second, the whole time course can be modelled at once, so the analysis does not depend on averaging the signal within arbitrarily chosen time windows. Differences between conditions can likewise be estimated as smooth functions of time, which shows when they emerge and how they evolve. Third, pupil time series are strongly autocorrelated, and GAMMs can account for this dependency [@VanRij2019]. In our case, we downsampled the pupil signal to 50 Hz to reduce autocorrelation between successive samples, following the recommendations of @VanRij2019. The hierarchical extension adds participant-level smooths alongside the condition-level smooths, so that each participant's pupil response can differ in shape as well as in overall level. Through partial pooling, these individual curves are shrunk towards the group-level curve, which gives more stable estimates for participants with noisier data while still capturing individual variability [@Pedersen2019].
+To test whether the time course of pupil dilation differed between conditions, we analysed the pupil traces with a hierarchical generalised additive mixed model (HGAMM; @Wood2011; @Wood2017; @Pedersen2019), an approach that has been applied successfully to pupillometric data [@VanRij2019]. GAMMs are well-suited to pupil data for four reasons. First, the pupil response follows a nonlinear time course whose shape is not exactly known in advance. GAMMs estimate the shape of the curve directly from the data using smooth functions (splines), and a penalty on the wiggliness of each smooth guards against overfitting. Second, the whole time course can be modelled at once, so the analysis does not depend on averaging the signal within arbitrarily chosen time windows. Differences between conditions can likewise be estimated as smooth functions of time, which shows when they emerge and how they evolve. Third, pupil time series are strongly autocorrelated, and GAMMs can account for this dependency [@VanRij2019]. In our case, we downsampled the pupil signal to 50 Hz to reduce autocorrelation between successive samples, following the recommendations of @VanRij2019. Fourth, a hierarchical extension adds participant-level smooths alongside the condition-level smooths, so that each participant's pupil response can differ in shape as well as in overall level. Through partial pooling, these individual curves are shrunk towards the group-level curve, which gives more stable estimates for participants with noisier data while still capturing individual variability [@Pedersen2019].
 The model specifications can be seen in @tbl-pupil-metrics-GAMM-formula. From the model predictions, the expected median pupil dilation signal was compared between conditions of interest: for Correct trials (Learned vs.Novel) to visualize the potential pupil "old/new" effect and separately for incorrect trials (Learned vs. Novel). The R package brms [@brms] was used to fit the GAMM model. 
 
 ```{r}
@@ -388,7 +390,7 @@ The model specifications can be seen in @tbl-pupil-metrics-GAMM-formula. From th
 #| include: false
 # create a df
 regression_formula_gamm <- tribble(
-  ~`GAMM formula`,                                                                                             
+  ~`GAMM formula`                                                                                                           ,
   "Pupil diameter (mm): 1 + int_cond + s(time, by = int_cond, bs = bs, k = 10) + s(time, pid, bs = fs, xt = list(bs = bs))"
 )
 ```
@@ -405,6 +407,7 @@ tt_manuscript(
 
 
 ### Pupil metrics
+
 Pupil metrics (mean pupil size, peak pupil size and rate of pupil change) were compared between response accuracy (Correct vs. Incorrect trials) and stimulus conditions (Learned vs. Novel). For each pupil metrics, a multilevel Bayesian model was fitted and the specifications of each model can be seen in @tbl-pupil-metrics-model-formula. The R package brms [@brms] was used to fit the three Bayesian multilevel models. 
 
 ```{r}
@@ -412,9 +415,9 @@ Pupil metrics (mean pupil size, peak pupil size and rate of pupil change) were c
 #| include: false
 # create a df
 regression_formula_metrics <- tribble(
-  ~`Pupil metrics`          , ~Condition                 , ~Formula                                                                                     ,
-  "Mean pupil size" , "familiarity:accuracy" , "Mean pupil size:  0 + familiarity:accuracy + (1|participant)"              ,
-  "Peak pupil size" , "familiarity:accuracy" , "Peak pupil size: 0 + familiarity:accuracy + (1|participant)" ,
+  ~`Pupil metrics`       , ~Condition             , ~Formula                                                           ,
+  "Mean pupil size"      , "familiarity:accuracy" , "Mean pupil size:  0 + familiarity:accuracy + (1|participant)"     ,
+  "Peak pupil size"      , "familiarity:accuracy" , "Peak pupil size: 0 + familiarity:accuracy + (1|participant)"      ,
   "Rate of pupil change" , "familiarity:accuracy" , "Rate of pupil change: 0 + familiarity:accuracy + (1|participant)"
 )
 ```
@@ -436,6 +439,7 @@ For the threshold parameter, we computed the median of the two threshold paramet
 For the drift rate parameter, we computed the median of two drift rate parameters.
 Drift rate (TRUE-FALSE) is the subtraction drift rate (TRUE) - drift rate (FALSE) and represent the signal to noise ratio provided by the stimulus.
 For each stimulus condition (Learned and Novel), the median drift rate (TRUE-FALSE) was computed.
+
 All median values of these parameters posterior distribution were then correlated with the average of the pupil metrics for each corresponding conditions, for each subject. More specifically, Drift rate (TRUE-FALSE) was correlated with the difference in pupil metrics between correct and incorrect trials for each condition (ex: Drift rate (TRUE-FALSE) x (Mean pupil size (Correct) - Mean pupil size (Incorrect)). 
 Regarding threshold we correlated pupil metrics in function of the response of the participant. The threshold learned parameter was correlates with pupil metrics when the response of the participant was "Learned", and threshold novel parameter was correlates with pupil metrics when the response of the participant was "Novel", independently of the accuracy of the response. 
 
@@ -451,17 +455,17 @@ By summarising the posterior distribution of these correlation values, this appr
 
 Beyond estimating post hoc associations between our parameters of interest and pupil metrics, we also fit a joint model linking the behavioral and pupil data directly. Joint modelling offers a way to combine multiple data streams, such as choice/RT data and physiological measures, within a single estimation framework, rather than analyzing each in isolation and relating them afterwards [@Turner2013; @Turner2017; @Turner2019]. Unlike post hoc correlations, which treat each parameter's point estimate as fixed and known, joint models estimate the relationship between data sources as part of the same generative process, so that measurement uncertainty in each parameter is propagated into the estimated association rather than discarded [@Turner2015; @Nunez2024]. By jointly modelling behavioral (response time and accuracy) and pupil data within a single hierarchical framework, we sought to characterize the magnitude of pupil–behavior relationships in a way that accounts for this shared uncertainty. It is important to stress that this analysis remains exploratory: our aim was to evaluate the feasibility of jointly modelling LBA and pupillometric data, and no substantive inferences are drawn from its results.
 
-We used the EMC2 R package [@EMC2] to fit a hierarchical Bayesian model combining a Linear Ballistic Accumulator (LBA) model of response times and accuracy with a pupil component. In the LBA, drift rates varied by stimulus type (learned/novel) and accumulator match (match/mismatch), thresholds by response option, and start-point variability and non-decision time were estimated as single parameters, with the drift-rate variability of the mismatching accumulator fixed for identifiability. Mean baseline-corrected pupil size per trial was modeled with a Gaussian regression (via EMC2's design_fmri function, used here as a generic GLM engine, without convolution) with one regressor per trial type (Learned_Correct, Learned_Incorrect, Novel_Correct, Novel_Incorrect). Behavioral and pupil parameters were estimated together, so that individual differences in both were drawn from a shared multivariate distribution. From the resulting subject-level posterior draws, we computed correlations between conditions of interest. In our case, we extracted the mean posterior draws for Drift rate Learned (TRUE-FALSE) and Novel (TRUE-FALSE) and correlated them with the posterior draws of the mean pupil size for the learned condition (Correct-Incorrect) and for the novel condition (Correct-Incorrect). The objective was to estimate if we could retrieve the correlations obtained in the point estimates correlations section as well as the ones obtained in the plausible values section. As mentioned, this analysis is exploratory and was intended as a proof of concept for a joint modelling pipeline of pupil and behavioral data.
+To fit a joint model, we used the EMC2 R package [@EMC2] to fit a hierarchical Bayesian model combining a Linear Ballistic Accumulator (LBA) model of response times and accuracy with a pupil component. In the LBA, drift rates varied by stimulus type (learned/novel) and accumulator match (match/mismatch), thresholds by response option, and start-point variability and non-decision time were estimated as single parameters, with the drift-rate variability of the mismatching accumulator fixed for identifiability. Mean baseline-corrected pupil size per trial was modeled with a Gaussian regression (via EMC2's design_fmri function, used here as a generic GLM engine, without convolution) with one regressor per trial type (Learned_Correct, Learned_Incorrect, Novel_Correct, Novel_Incorrect). Behavioral and pupil parameters were estimated together, so that individual differences in both were drawn from a shared multivariate distribution. From the resulting subject-level posterior draws, we computed correlations between conditions of interest. In our case, we extracted the mean posterior draws for Drift rate Learned (TRUE-FALSE) and Novel (TRUE-FALSE) and correlated them with the posterior draws of the mean pupil size for the learned condition (Correct-Incorrect) and for the novel condition (Correct-Incorrect). The objective was to estimate if we could retrieve the correlations obtained in the point estimates correlations section as well as the ones obtained in the plausible values section. As mentioned, this analysis is exploratory and was intended as a proof of concept for a joint modelling pipeline of pupil and behavioral data.
 
 
 ### Inferential criteria
 
 To evaluate the different posterior distributions estimated from the data analysis, we used three complementary criteria: sign, size and precision [@cummingNewStatisticsWhy2014; @kruschkeBayesianDataAnalysis2018; @mcelreath2018statistical].
-To address the sign (or direction) of the effect, we reported if the median value is positive or negative.
-Second, we evaluated the size or magnitude of the posterior distribution by considering the size of the median value as well as the extent to which lower or upper bounds of the 95% quantile interval approach zero (no relationship).
+First, to address the sign (or direction) of the effect, we reported if the median value is positive or negative.
+Second, we evaluated the size or magnitude of the posterior distribution by considering the size of the median value.
+Third, we evaluated precision via the quantile interval estimates.
 For example, if the 95% quantile interval excluded zero, we would have been reasonably confident in our inference of a non-zero effect.
-Furthermore, we used the width of the 95% equal-tailed (quantile) credible intervals
-Whereas narrow estimates indicate precise estimates, wider intervals indicate substantial uncertainty about the estimated parameter value, which may warrant a more cautious interpretation.
+More generally, narrow estimates indicate precise estimates, wider intervals indicate substantial uncertainty about the estimated parameter value, which may warrant a more cautious interpretation.
 
 # Results
 
@@ -484,32 +488,32 @@ theta_pid_q <- read_csv(here("data/theta_pid_q.csv"))
 #| label: wrangle-threshold
 #| include: false
 thresh_group <- theta_group |>
- filter(str_detect(param, "B_")) |>
- mutate(
-   response = if_else(str_detect(param, "lRLearned"), "Learned", "Novel"),
-   response = factor(response, levels = c("Learned", "Novel"))
- )|>
+  filter(str_detect(param, "B_")) |>
+  mutate(
+    response = if_else(str_detect(param, "lRLearned"), "Learned", "Novel"),
+    response = factor(response, levels = c("Learned", "Novel"))
+  ) |>
   rename(.draw = "datapoint")
 
 thresh_pid <- theta_pid |>
- filter(str_detect(param, "B_")) |>
- mutate(
-   response = if_else(str_detect(param, "lRLearned"), "Learned", "Novel"),
-   response = factor(response, levels = c("Learned", "Novel"))
- )|>
+  filter(str_detect(param, "B_")) |>
+  mutate(
+    response = if_else(str_detect(param, "lRLearned"), "Learned", "Novel"),
+    response = factor(response, levels = c("Learned", "Novel"))
+  ) |>
   rename(.draw = "datapoint")
 
 thresh_diff_group <- thresh_group |>
- pivot_wider(id_cols = c(.draw), names_from = response, values_from = value) |>
- mutate(diff = Novel - Learned)
+  pivot_wider(id_cols = c(.draw), names_from = response, values_from = value) |>
+  mutate(diff = Novel - Learned)
 
 thresh_diff_pid <- thresh_pid |>
- pivot_wider(
-   id_cols = c(pid, .draw),
-   names_from = response,
-   values_from = value
- ) |>
- mutate(diff = Novel - Learned) 
+  pivot_wider(
+    id_cols = c(pid, .draw),
+    names_from = response,
+    values_from = value
+  ) |>
+  mutate(diff = Novel - Learned)
 
 # quantiles
 thresh_diff_group_q <- thresh_diff_group |> median_qi(diff)
@@ -520,59 +524,59 @@ thresh_diff_pid_q <- thresh_diff_pid |> group_by(pid) |> median_qi(diff)
 #| label: wrangle-drift
 #| include: false
 drift_group <- theta_group |>
- filter(str_detect(param, "v_S")) |>
- mutate(
-   condition = if_else(str_detect(param, "Novel"), "Novel", "Learned"),
-   accuracy = if_else(str_detect(param, "TRUE"), "True", "False"),
-   condition = factor(condition, levels = c("Learned", "Novel")),
-   accuracy = factor(accuracy, levels = c("False", "True"))
- ) |>
+  filter(str_detect(param, "v_S")) |>
+  mutate(
+    condition = if_else(str_detect(param, "Novel"), "Novel", "Learned"),
+    accuracy = if_else(str_detect(param, "TRUE"), "True", "False"),
+    condition = factor(condition, levels = c("Learned", "Novel")),
+    accuracy = factor(accuracy, levels = c("False", "True"))
+  ) |>
   rename(.draw = "datapoint")
 
 drift_pid <- theta_pid |>
- filter(str_detect(param, "v_S")) |>
- mutate(
-   condition = if_else(str_detect(param, "Novel"), "Novel", "Learned"),
-   accuracy = if_else(str_detect(param, "TRUE"), "True", "False"),
-   condition = factor(condition, levels = c("Learned", "Novel")),
-   accuracy = factor(accuracy, levels = c("False", "True"))
- ) |>
+  filter(str_detect(param, "v_S")) |>
+  mutate(
+    condition = if_else(str_detect(param, "Novel"), "Novel", "Learned"),
+    accuracy = if_else(str_detect(param, "TRUE"), "True", "False"),
+    condition = factor(condition, levels = c("Learned", "Novel")),
+    accuracy = factor(accuracy, levels = c("False", "True"))
+  ) |>
   rename(.draw = "datapoint")
 
 # true - false per condition
 drift_acc_diff_group <- drift_group |>
   pivot_wider(
-   id_cols = c(.draw, condition),
-   names_from = accuracy,
-   values_from = value
- ) |>
+    id_cols = c(.draw, condition),
+    names_from = accuracy,
+    values_from = value
+  ) |>
   mutate(diff = True - False)
 
 drift_acc_diff_pid <- drift_pid |>
- pivot_wider(
-   id_cols = c(pid, .draw, condition),
-   names_from = accuracy,
-   values_from = value
- ) |>
- mutate(diff = True - False)
+  pivot_wider(
+    id_cols = c(pid, .draw, condition),
+    names_from = accuracy,
+    values_from = value
+  ) |>
+  mutate(diff = True - False)
 
 # novel - learned contrast
 drift_cond_diff_group <- drift_acc_diff_group |>
- pivot_wider(id_cols = .draw, names_from = condition, values_from = diff) |>
- mutate(diff = Novel - Learned)
+  pivot_wider(id_cols = .draw, names_from = condition, values_from = diff) |>
+  mutate(diff = Novel - Learned)
 
 drift_cond_diff_pid <- drift_acc_diff_pid |>
- pivot_wider(
-   id_cols = c(pid, .draw),
-   names_from = condition,
-   values_from = diff
- ) |>
- mutate(diff = Novel - Learned)
+  pivot_wider(
+    id_cols = c(pid, .draw),
+    names_from = condition,
+    values_from = diff
+  ) |>
+  mutate(diff = Novel - Learned)
 
 # quantiles
 drift_acc_diff_group_q <- drift_acc_diff_group |>
- group_by(condition) |>
- median_qi(diff)
+  group_by(condition) |>
+  median_qi(diff)
 drift_cond_diff_group_q <- drift_cond_diff_group |> median_qi(diff)
 drift_cond_diff_pid_q <- drift_cond_diff_pid |> group_by(pid) |> median_qi(diff)
 ```
@@ -641,73 +645,73 @@ The quality of the evidence accumulation was greater for Novel faces compared to
 #| include: true
 #Build table
 thresh_cond_table <- theta_group_q |>
- filter(str_detect(param, "B_")) |>
- mutate(
-   parameter = "Threshold",
-   condition = case_when(
-     str_detect(param, "lRNovel") ~ "Novel",
-     str_detect(param, "lRLearned") ~ "Learned",
-   )
- ) |>
- select(parameter, condition, median = value, lower = .lower, upper = .upper)
+  filter(str_detect(param, "B_")) |>
+  mutate(
+    parameter = "Threshold",
+    condition = case_when(
+      str_detect(param, "lRNovel") ~ "Novel",
+      str_detect(param, "lRLearned") ~ "Learned",
+    )
+  ) |>
+  select(parameter, condition, median = value, lower = .lower, upper = .upper)
 
 thresh_table <- thresh_diff_group |>
- median_qi(diff) |>
- mutate(
-   parameter = "Threshold contrast",
-   condition = "Novel - Learned",
- ) |>
- select(parameter, condition, median = diff, lower = .lower, upper = .upper)
+  median_qi(diff) |>
+  mutate(
+    parameter = "Threshold contrast",
+    condition = "Novel - Learned",
+  ) |>
+  select(parameter, condition, median = diff, lower = .lower, upper = .upper)
 
 drift_table <- drift_acc_diff_group |>
- group_by(condition) |>
- median_qi(diff) |>
- mutate(parameter = "Drift rate") |>
- select(parameter, condition, median = diff, lower = .lower, upper = .upper)
+  group_by(condition) |>
+  median_qi(diff) |>
+  mutate(parameter = "Drift rate") |>
+  select(parameter, condition, median = diff, lower = .lower, upper = .upper)
 
 drift_diff_table <- drift_cond_diff_group |>
- median_qi(diff) |>
- mutate(
-   parameter = "Drift rate contrast",
-   condition = "Novel - Learned"
- ) |>
- select(parameter, condition, median = diff, lower = .lower, upper = .upper)
+  median_qi(diff) |>
+  mutate(
+    parameter = "Drift rate contrast",
+    condition = "Novel - Learned"
+  ) |>
+  select(parameter, condition, median = diff, lower = .lower, upper = .upper)
 
 ## Combine
 lba_table <- bind_rows(
- thresh_cond_table,
- thresh_table,
- drift_table,
- drift_diff_table
+  thresh_cond_table,
+  thresh_table,
+  drift_table,
+  drift_diff_table
 ) |>
- mutate(
-   qi = paste0("[", round(lower, 3), ", ", round(upper, 3), "]"),
-   median = round(median, 3),
-   Parameter = factor(
-     parameter,
-     levels = c(
-       "Threshold",
-       "Threshold contrast",
-       "Drift rate",
-       "Drift rate contrast"
-     )
-   ),
-   Condition = factor(
-     condition,
-     levels = c(
-       "Novel",
-       "Learned",
-       "Novel - Learned"
-     )
-   )
- ) |>
- arrange(Parameter, Condition) |>
- select(
-   Parameter,
-   Condition,
-   Median = median,
-   `95% QI` = qi
- )
+  mutate(
+    qi = paste0("[", round(lower, 3), ", ", round(upper, 3), "]"),
+    median = round(median, 3),
+    Parameter = factor(
+      parameter,
+      levels = c(
+        "Threshold",
+        "Threshold contrast",
+        "Drift rate",
+        "Drift rate contrast"
+      )
+    ),
+    Condition = factor(
+      condition,
+      levels = c(
+        "Novel",
+        "Learned",
+        "Novel - Learned"
+      )
+    )
+  ) |>
+  arrange(Parameter, Condition) |>
+  select(
+    Parameter,
+    Condition,
+    Median = median,
+    `95% QI` = qi
+  )
 tt_manuscript(
   lba_table,
   notes = "QI = quantile interval."
@@ -726,15 +730,14 @@ bp1 <- read_rds(here("models/model_interaction.rds"))
 datam <- read_csv(here("data/datam_processed.csv"))
 
 index_data <- datam %>%
-  select(pid, trial, time, `Pupil_Diameter_bc.mm`, int_cond) 
-
+  select(pid, trial, time, `Pupil_Diameter_bc.mm`, int_cond)
 ```
 
 ```{r}
 #| label: create-contrasts-plots
 #| include: false
 grid <- expand_grid(
-  time      = seq(0, 2.5, length.out = 200),
+  time = seq(0, 2.5, length.out = 200),
   condition = c("Learned.true", "Learned.false", "Novel.true", "Novel.false")
 )
 
@@ -744,36 +747,49 @@ epred_pid <- index_data %>%
 
 epred_group <- epred_pid %>%
   group_by(int_cond, time, .draw) %>%
-  summarise(.epred_group = mean(.epred, na.rm =TRUE),
-            sd_group = sd(.epred, na.rm = TRUE))
+  summarise(
+    .epred_group = mean(.epred, na.rm = TRUE),
+    sd_group = sd(.epred, na.rm = TRUE)
+  )
 
 epred_group_2 <- epred_group |>
-  separate(int_cond, into = c("Condition", "Accuracy"), sep = "\\.", remove = FALSE) |>
-  mutate(Condition = factor(Condition, levels = c("Learned", "Novel")),
-       Accuracy = factor(Accuracy, levels = c("false", "true")))
+  separate(
+    int_cond,
+    into = c("Condition", "Accuracy"),
+    sep = "\\.",
+    remove = FALSE
+  ) |>
+  mutate(
+    Condition = factor(Condition, levels = c("Learned", "Novel")),
+    Accuracy = factor(Accuracy, levels = c("false", "true"))
+  )
 
 summ_traces <- epred_group_2 %>%
   group_by(Accuracy, Condition, time) %>%
-  summarise(est   = median(.epred_group),
-            lower = quantile(.epred_group, .025),
-            upper = quantile(.epred_group, .975),
-            .groups = "drop")
+  summarise(
+    est = median(.epred_group),
+    lower = quantile(.epred_group, .025),
+    upper = quantile(.epred_group, .975),
+    .groups = "drop"
+  )
 
 # 2. Difference Learned - Novel, computed WITHIN each draw, then summarised ---
 summ_diff <- epred_group_2 %>%
-  ungroup()|>
+  ungroup() |>
   select(Accuracy, Condition, time, .draw, .epred_group) %>%
   pivot_wider(names_from = Condition, values_from = .epred_group) %>%
   mutate(diff = Learned - Novel) %>%
   group_by(Accuracy, time) %>%
-  summarise(est   = median(diff),
-            lower = quantile(diff, .025),
-            upper = quantile(diff, .975),
-            .groups = "drop")
+  summarise(
+    est = median(diff),
+    lower = quantile(diff, .025),
+    upper = quantile(diff, .975),
+    .groups = "drop"
+  )
 
 # Shared y-limits so correct and incorrect rows are directly comparable
 trace_lims <- range(c(summ_traces$lower, summ_traces$upper))
-diff_lims  <- range(c(summ_diff$lower,  summ_diff$upper, 0))
+diff_lims <- range(c(summ_diff$lower, summ_diff$upper, 0))
 
 diff_draws <- epred_group_2 |>
   ungroup() |>
@@ -783,10 +799,12 @@ diff_draws <- epred_group_2 |>
 
 diff_time <- diff_draws |>
   group_by(Accuracy, time) |>
-  summarise(est   = median(diff),
-            lower = quantile(diff, .025),
-            upper = quantile(diff, .975),
-            .groups = "drop") |>
+  summarise(
+    est = median(diff),
+    lower = quantile(diff, .025),
+    upper = quantile(diff, .975),
+    .groups = "drop"
+  ) |>
   mutate(credible = lower > 0 | upper < 0)
 
 # Continuous stretches where the 95% CrI excludes zero
@@ -837,22 +855,22 @@ window_effect <- epred_group_2 |>
   median_qi(diff)
 
 # Helpers
-cw     <- function(acc, what) main_window[[what]][main_window$Accuracy == acc]
-we     <- function(acc, what) window_effect[[what]][window_effect$Accuracy == acc]
-fmt_ms <- function(x) round(x, -1)          # nearest 10 ms
+cw <- function(acc, what) main_window[[what]][main_window$Accuracy == acc]
+we <- function(acc, what) window_effect[[what]][window_effect$Accuracy == acc]
+fmt_ms <- function(x) round(x, -1) # nearest 10 ms
 fmt_mm <- function(x) sprintf("%.3f", x)
 
 # Correct trials (Learned - Novel)
 cor_start <- fmt_ms(cw("true", "start"))
-cor_end   <- fmt_ms(cw("true", "end"))
-cor_est   <- fmt_mm(we("true", "diff"))
+cor_end <- fmt_ms(cw("true", "end"))
+cor_est <- fmt_mm(we("true", "diff"))
 cor_lower <- fmt_mm(we("true", ".lower"))
 cor_upper <- fmt_mm(we("true", ".upper"))
 
 # Incorrect trials, reported as Novel - Learned (false alarms - misses)
 inc_start <- fmt_ms(cw("false", "start"))
-inc_end   <- fmt_ms(cw("false", "end"))
-inc_est   <- fmt_mm(-we("false", "diff"))
+inc_end <- fmt_ms(cw("false", "end"))
+inc_est <- fmt_mm(-we("false", "diff"))
 inc_lower <- fmt_mm(-we("false", ".upper"))
 inc_upper <- fmt_mm(-we("false", ".lower"))
 ```
@@ -865,52 +883,81 @@ To investigate the pupil old/new effect in our face recognition task, we fitted 
 
 
 ```{r}
-# Observed (preprocessed) pupil traces: mean ± SEM across participants 
+# Observed (preprocessed) pupil traces: mean ± SEM across participants
 obs_pid <- datam |>
-  separate(int_cond, into = c("Condition", "Accuracy"), sep = "\\.", remove = FALSE) |>
+  separate(
+    int_cond,
+    into = c("Condition", "Accuracy"),
+    sep = "\\.",
+    remove = FALSE
+  ) |>
   filter(time <= 2400) |>
   group_by(pid, Condition, Accuracy, time) |>
-  summarise(pupil = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE), .groups = "drop")
+  summarise(
+    pupil = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+    .groups = "drop"
+  )
 
 summ_obs <- obs_pid |>
   group_by(Condition, Accuracy, time) |>
-  summarise(mean = mean(pupil, na.rm = TRUE),
-            sem  = sd(pupil, na.rm = TRUE) / sqrt(sum(!is.na(pupil))),
-            .groups = "drop") |>
-  mutate(Condition = factor(Condition, levels = c("Learned", "Novel")),
-         Accuracy  = factor(Accuracy,  levels = c("false", "true")))
+  summarise(
+    mean = mean(pupil, na.rm = TRUE),
+    sem = sd(pupil, na.rm = TRUE) / sqrt(sum(!is.na(pupil))),
+    .groups = "drop"
+  ) |>
+  mutate(
+    Condition = factor(Condition, levels = c("Learned", "Novel")),
+    Accuracy = factor(Accuracy, levels = c("false", "true"))
+  )
 
 # Shared y-limits for observed and predicted traces, across both accuracy rows
-trace_lims <- range(c(summ_traces$lower, summ_traces$upper,
-                      summ_obs$mean - summ_obs$sem, summ_obs$mean + summ_obs$sem))
+trace_lims <- range(c(
+  summ_traces$lower,
+  summ_traces$upper,
+  summ_obs$mean - summ_obs$sem,
+  summ_obs$mean + summ_obs$sem
+))
 ```
 
 
 ```{r}
 # 3. One row = trace panel + difference panel ---------------------------------
 make_row <- function(acc, label) {
-
   win <- credible_windows |> filter(Accuracy == acc)
 
-  shade <- geom_rect(data = win,
-                     aes(xmin = start, xmax = end, ymin = -Inf, ymax = Inf),
-                     inherit.aes = FALSE, fill = "grey85", alpha = 0.6)
+  shade <- geom_rect(
+    data = win,
+    aes(xmin = start, xmax = end, ymin = -Inf, ymax = Inf),
+    inherit.aes = FALSE,
+    fill = "grey85",
+    alpha = 0.6
+  )
 
-  x_scale <- scale_x_continuous(breaks = seq(0, 2400, 800),
-                                minor_breaks = seq(0, 2400, 400),
-                                guide = guide_axis(minor.ticks = TRUE),
-                                expand = expansion(mult = c(0, 0.03)))
+  x_scale <- scale_x_continuous(
+    breaks = seq(0, 2400, 800),
+    minor_breaks = seq(0, 2400, 400),
+    guide = guide_axis(minor.ticks = TRUE),
+    expand = expansion(mult = c(0, 0.03))
+  )
 
   p_obs <- summ_obs %>%
     filter(Accuracy == acc) %>%
     ggplot(aes(time, mean, colour = Condition, fill = Condition)) +
-    geom_ribbon(aes(ymin = mean - sem, ymax = mean + sem), alpha = .2, colour = NA) +
+    geom_ribbon(
+      aes(ymin = mean - sem, ymax = mean + sem),
+      alpha = .2,
+      colour = NA
+    ) +
     geom_line(linewidth = 1) +
     scale_colour_manual(values = myColors_4) +
     scale_fill_manual(values = myColors_4) +
     coord_cartesian(ylim = trace_lims) +
     x_scale +
-    labs(title = "Processed pupil traces", x = "Time (ms)", y = "Pupil size (mm)")
+    labs(
+      title = "Processed pupil traces",
+      x = "Time (ms)",
+      y = "Pupil size (mm)"
+    )
 
   p_trace <- summ_traces %>%
     filter(Accuracy == acc) %>%
@@ -922,7 +969,11 @@ make_row <- function(acc, label) {
     scale_fill_manual(values = myColors_4) +
     coord_cartesian(ylim = trace_lims) +
     x_scale +
-    labs(title = "GAMM prediction", x = "Time (ms)", y = "Predicted pupil size (mm)")
+    labs(
+      title = "GAMM prediction",
+      x = "Time (ms)",
+      y = "Predicted pupil size (mm)"
+    )
 
   p_diff <- summ_diff %>%
     filter(Accuracy == acc) %>%
@@ -933,11 +984,15 @@ make_row <- function(acc, label) {
     geom_line(linewidth = 1) +
     coord_cartesian(ylim = diff_lims) +
     x_scale +
-    labs(title = "Learned \u2212 Novel", x = "Time (ms)", y = "Difference in pupil size (mm)")
+    labs(
+      title = "Learned \u2212 Novel",
+      x = "Time (ms)",
+      y = "Difference in pupil size (mm)"
+    )
 
   p_obs + p_trace + p_diff + plot_layout(guides = "collect")
 }
-p_correct   <- make_row("true",  "Correct trials")
+p_correct <- make_row("true", "Correct trials")
 p_incorrect <- make_row("false", "Incorrect trials")
 ```
 
@@ -965,9 +1020,11 @@ data_pupil_rate <- read_csv(here("data/pupil_metrics/rate_pid.csv"))
 
 #Wrangle pupil data for drift rate
 data_pupil <- data_pupil_mean %>%
-  mutate(pupil_mean = mean,
-         pupil_max = data_pupil_max$mean,
-         pupil_rate = data_pupil_rate$mean_pupil_change) %>%
+  mutate(
+    pupil_mean = mean,
+    pupil_max = data_pupil_max$mean,
+    pupil_rate = data_pupil_rate$mean_pupil_change
+  ) %>%
   select(pid, condition, accuracy, pupil_mean, pupil_max, pupil_rate) %>%
   rename(cond = condition, acc = accuracy)
 ```
@@ -977,8 +1034,12 @@ data_pupil <- data_pupil_mean %>%
 #| label: load-models-metrics
 #| include: false
 
-metrics <- c("pupil_mean", "pupil_max", "pupil_rate") 
-metric_levels <- c("Pupil mean (mm)", "Pupil max (mm)", "Rate of pupil change (mm/s)")
+metrics <- c("pupil_mean", "pupil_max", "pupil_rate")
+metric_levels <- c(
+  "Pupil mean (mm)",
+  "Pupil max (mm)",
+  "Rate of pupil change (mm/s)"
+)
 
 fits <- set_names(metrics) |>
   map(~ readRDS(here("models", paste0("fit_", .x, ".rds"))))
@@ -989,17 +1050,16 @@ fits <- set_names(metrics) |>
 #| label: plot-models-function
 #| include: false
 
-metric_titles <- c(pupil_mean = "Mean pupil size (mm)",
-                   pupil_max  = "Peak pupil size (mm)",
-                   pupil_rate = "Pupil change rate (mm/s)")
+metric_titles <- c(
+  pupil_mean = "Mean pupil size (mm)",
+  pupil_max = "Peak pupil size (mm)",
+  pupil_rate = "Pupil change rate (mm/s)"
+)
 
 contrasts <- c(
-  "Familiarity (Learned - Novel)" =
-    "(int_condLearned_correct + int_condLearned_incorrect)/2 - (int_condNovel_correct + int_condNovel_incorrect)/2 = 0",
-  "Accuracy (Correct - Incorrect)" =
-    "(int_condLearned_correct + int_condNovel_correct)/2 - (int_condLearned_incorrect + int_condNovel_incorrect)/2 = 0",
-  "Interaction" =
-    "(int_condLearned_correct - int_condLearned_incorrect) - (int_condNovel_correct - int_condNovel_incorrect) = 0"
+  "Familiarity (Learned - Novel)" = "(int_condLearned_correct + int_condLearned_incorrect)/2 - (int_condNovel_correct + int_condNovel_incorrect)/2 = 0",
+  "Accuracy (Correct - Incorrect)" = "(int_condLearned_correct + int_condNovel_correct)/2 - (int_condLearned_incorrect + int_condNovel_incorrect)/2 = 0",
+  "Interaction" = "(int_condLearned_correct - int_condLearned_incorrect) - (int_condNovel_correct - int_condNovel_incorrect) = 0"
 )
 contrasts_dir <- sub("= 0", "> 0", contrasts)
 
@@ -1013,44 +1073,60 @@ cell_draws <- function(fit, metric, data = data_pupil, unit_mult = 1) {
     as_tibble() |>
     select(starts_with("b_int_cond")) |>
     pivot_longer(everything(), names_to = "cell", values_to = "z") |>
-    mutate(value = (z * s + m) * unit_mult,
-           cell  = str_remove(cell, "b_int_cond")) |>
+    mutate(
+      value = (z * s + m) * unit_mult,
+      cell = str_remove(cell, "b_int_cond")
+    ) |>
     separate(cell, into = c("cond", "acc"), sep = "_") |>
-    mutate(cond = factor(cond, levels = c("Learned", "Novel")),
-           acc  = factor(acc,  levels = c("correct", "incorrect")))
+    mutate(
+      cond = factor(cond, levels = c("Learned", "Novel")),
+      acc = factor(acc, levels = c("correct", "incorrect"))
+    )
 }
 
 # Table of contrasts with Evid.Ratio and Post.Prob
 contrast_table <- function(fit, hyps = contrasts_dir) {
-  h  <- hypothesis(fit, hyps)
+  h <- hypothesis(fit, hyps)
   er <- h$hypothesis$Evid.Ratio
 
   tibble(
-    Contrast               = names(hyps),
-    `Estimate (SD units)`  = sprintf("%.2f", h$hypothesis$Estimate),
-    `95% CrI`              = map_chr(h$samples, ~ sprintf("[%.2f, %.2f]",
-                                     quantile(.x, 0.025), quantile(.x, 0.975)))
+    Contrast = names(hyps),
+    `Estimate (SD units)` = sprintf("%.2f", h$hypothesis$Estimate),
+    `95% CrI` = map_chr(
+      h$samples,
+      ~ sprintf("[%.2f, %.2f]", quantile(.x, 0.025), quantile(.x, 0.975))
+    )
   )
 }
 
 plot_cells <- function(fit, metric, unit_mult = 1) {
-  d     <- cell_draws(fit, metric, unit_mult = unit_mult)
+  d <- cell_draws(fit, metric, unit_mult = unit_mult)
   dodge <- position_dodge(width = 0.5)
 
   ggplot(d, aes(x = acc, y = value, colour = cond, fill = cond, group = cond)) +
-    stat_halfeye(position = dodge, slab_alpha = 0.35,
-                 point_interval = mean_qi, .width = c(0.66, 0.95)) +
+    stat_halfeye(
+      position = dodge,
+      slab_alpha = 0.35,
+      point_interval = mean_qi,
+      .width = c(0.66, 0.95)
+    ) +
     stat_summary(fun = mean, geom = "line", position = dodge, linewidth = 0.8) +
-    scale_colour_manual(values = myColors_4,
-                        aesthetics = c("colour", "fill")) +
+    scale_colour_manual(values = myColors_4, aesthetics = c("colour", "fill")) +
     scale_x_discrete(labels = c(incorrect = "Incorrect", correct = "Correct")) +
-    labs(x = "Accuracy", y = metric_titles[[metric]],
-         colour = "Condition", fill = "Condition")
+    labs(
+      x = "Accuracy",
+      y = metric_titles[[metric]],
+      colour = "Condition",
+      fill = "Condition"
+    )
 }
 
 combined_contrast_table <- function(fits, hyps = contrasts_dir) {
-  imap(fits, ~ contrast_table(.x, hyps) |>
-         mutate(Metric = str_remove(metric_titles[[.y]], " \\(.*\\)"))) |>
+  imap(
+    fits,
+    ~ contrast_table(.x, hyps) |>
+      mutate(Metric = str_remove(metric_titles[[.y]], " \\(.*\\)"))
+  ) |>
     list_rbind() |>
     relocate(Metric)
 }
@@ -1058,9 +1134,8 @@ combined_contrast_table <- function(fits, hyps = contrasts_dir) {
 combined_contrast_table(fits) |>
   gt::gt(groupname_col = "Metric")
 
-tab <-combined_contrast_table(fits)
+tab <- combined_contrast_table(fits)
 starts <- match(unique(tab$Metric), tab$Metric)
-
 ```
 To estimate if the stimulus condition (Learned vs Novel) and/or the response accuracy (Correct vs Incorrect) had any effect on the different pupil metrics, we fitted three Bayesian multilevel mixed model and report the posterior distributions, as well as the contrasts between stimulus conditions, accuracy and their interaction. Posterior contrasts for each pupil metric are reported in @tbl-contrasts-pupil, and the estimated condition means are shown in @fig-pupil-metrics-plots. All contrasts are expressed in standard deviation units.
 
@@ -1079,14 +1154,13 @@ That the effect emerged so consistently, using an independently collected pupil 
 #| fig-keep: last
 
 p_mean <- plot_cells(fits$pupil_mean, "pupil_mean", unit_mult = 1)
-p_max  <- plot_cells(fits$pupil_max,  "pupil_max",  unit_mult = 1)
+p_max <- plot_cells(fits$pupil_max, "pupil_max", unit_mult = 1)
 p_rate <- plot_cells(fits$pupil_rate, "pupil_rate", unit_mult = 1000)
 
 p_metrics <- (p_mean | p_max | p_rate) +
   plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "a") &
-  theme(legend.position = "bottom",
-        plot.tag = element_text(face = "bold"))
+  theme(legend.position = "bottom", plot.tag = element_text(face = "bold"))
 
 p_metrics
 ```
@@ -1095,14 +1169,13 @@ p_metrics
 #| label: tbl-contrasts-pupil
 #| tbl-cap: "Posterior contrasts for each pupil metric (SD units)"
 
-tt(select(tab, -Metric),
-   notes = "CrI = credible interval") |>
+tt(select(tab, -Metric), notes = "CrI = credible interval") |>
   group_tt(i = setNames(as.list(starts), unique(tab$Metric))) |>
   style_tt(i = 0, bold = TRUE) |>
   style_tt(i = "groupi", italic = TRUE) |>
-  style_tt(i = c(1,5,9), fontsize = 0.8) |>
+  style_tt(i = c(1, 5, 9), fontsize = 0.8) |>
   style_tt(i = c(2:4, 6:8, 10:12), fontsize = 0.7) |>
-  style_tt(i = 0, fontsize = 0.8) 
+  style_tt(i = 0, fontsize = 0.8)
 ```
 
 
@@ -1119,54 +1192,63 @@ In order to assess the association between pupil size and LBA parameters, we cal
 #| include: false
 data_pupil_sum <- data_pupil %>%
   group_by(pid, cond) %>%
-  summarise(pupil_mean = mean(pupil_mean),
-            pupil_max = mean(pupil_max),
-            pupil_rate = mean(pupil_rate))
+  summarise(
+    pupil_mean = mean(pupil_mean),
+    pupil_max = mean(pupil_max),
+    pupil_rate = mean(pupil_rate)
+  )
 
 #Wrangle data for threshold
 data_pupil_mean_thresh <- data_pupil_mean %>%
   mutate(
     response = if_else(
       (condition == "Learned" & accuracy == 1) |
-      (condition == "Novel"   & accuracy == 0),
+        (condition == "Novel" & accuracy == 0),
       "Learned",
       "Novel"
-    ))
+    )
+  )
 data_pupil_max_thresh <- data_pupil_max %>%
   mutate(
     response = if_else(
       (condition == "Learned" & accuracy == 1) |
-      (condition == "Novel"   & accuracy == 0),
+        (condition == "Novel" & accuracy == 0),
       "Learned",
       "Novel"
-    ))
+    )
+  )
 data_pupil_rate_thresh <- data_pupil_rate %>%
   mutate(
     response = if_else(
       (condition == "Learned" & accuracy == 1) |
-      (condition == "Novel"   & accuracy == 0),
+        (condition == "Novel" & accuracy == 0),
       "Learned",
       "Novel"
-    ))
+    )
+  )
 data_pupil_thresh <- data_pupil_mean_thresh %>%
-  mutate(pupil_mean = mean,
-         pupil_max = data_pupil_max_thresh$mean,
-         pupil_rate = data_pupil_rate_thresh$mean_pupil_change) %>%
+  mutate(
+    pupil_mean = mean,
+    pupil_max = data_pupil_max_thresh$mean,
+    pupil_rate = data_pupil_rate_thresh$mean_pupil_change
+  ) %>%
   select(pid, response, pupil_mean, pupil_max, pupil_rate) %>%
   rename(res = response)
 
 data_pupil_sum_thresh <- data_pupil_thresh %>%
   group_by(pid, res) %>%
-  summarise(pupil_mean = mean(pupil_mean),
-            pupil_max = mean(pupil_max),
-            pupil_rate = mean(pupil_rate))
+  summarise(
+    pupil_mean = mean(pupil_mean),
+    pupil_max = mean(pupil_max),
+    pupil_rate = mean(pupil_rate)
+  )
 ```
 
 ```{r}
 #| label: wrangle-param-data
 #| include: false
 thresh_pid_median <- thresh_pid %>%
-  group_by(pid,param) %>%
+  group_by(pid, param) %>%
   summarise(param_median = median(value)) %>%
   pivot_wider(names_from = param, values_from = param_median)
 
@@ -1178,7 +1260,7 @@ drift_pid_median <- drift_pid %>%
 subject_param <- drift_pid_median %>%
   left_join(
     thresh_pid_median %>%
-      select(pid, B_lRLearned, B_lRNovel), 
+      select(pid, B_lRLearned, B_lRNovel),
     by = "pid"
   )
 ```
@@ -1191,10 +1273,15 @@ subject_param <- drift_pid_median %>%
 
 # Step 1: acc-specific columns (e.g. mean_learned_true)
 acc_wide <- data_pupil %>%
-  mutate(acc_label = ifelse(acc == 1, "true", "false"),
-         cond = tolower(cond)) %>%
+  mutate(
+    acc_label = ifelse(acc == 1, "true", "false"),
+    cond = tolower(cond)
+  ) %>%
   group_by(pid, cond, acc_label) %>%
-  summarise(across(c(pupil_mean, pupil_max, pupil_rate), mean), .groups = "drop") %>%
+  summarise(
+    across(c(pupil_mean, pupil_max, pupil_rate), mean),
+    .groups = "drop"
+  ) %>%
   pivot_wider(
     names_from = c(cond, acc_label),
     values_from = c(pupil_mean, pupil_max, pupil_rate),
@@ -1207,22 +1294,28 @@ acc_wide <- data_pupil %>%
 pupil_by_acc <- data_pupil %>%
   mutate(
     cond = tolower(cond),
-    acc  = if_else(acc == 1, "true", "false")
+    acc = if_else(acc == 1, "true", "false")
   ) %>%
   group_by(pid, cond, acc) %>%
-  summarise(across(c(pupil_mean, pupil_max, pupil_rate), \(x) mean(x, na.rm = TRUE)),
-            .groups = "drop")
+  summarise(
+    across(c(pupil_mean, pupil_max, pupil_rate), \(x) mean(x, na.rm = TRUE)),
+    .groups = "drop"
+  )
 
 cond_wide <- pupil_by_acc %>%
-  pivot_longer(starts_with("pupil_"), names_to = "metric", names_prefix = "pupil_") %>%
-  pivot_wider(names_from = acc, values_from = value) %>%   # columns: true, false
-  mutate(diff = true - false) %>%                           # correct − incorrect
+  pivot_longer(
+    starts_with("pupil_"),
+    names_to = "metric",
+    names_prefix = "pupil_"
+  ) %>%
+  pivot_wider(names_from = acc, values_from = value) %>% # columns: true, false
+  mutate(diff = true - false) %>% # correct − incorrect
   pivot_longer(c(true, false, diff), names_to = "acc") %>%
   mutate(suffix = if_else(acc == "diff", "", paste0("_", acc))) %>%
   pivot_wider(
-    id_cols     = pid,
-    names_from  = c(metric, cond, suffix),
-    names_glue  = "{metric}_{cond}{suffix}",
+    id_cols = pid,
+    names_from = c(metric, cond, suffix),
+    names_glue = "{metric}_{cond}{suffix}",
     values_from = value
   )
 
@@ -1230,7 +1323,10 @@ cond_wide <- pupil_by_acc %>%
 cond_wide_thresh <- data_pupil_thresh %>%
   mutate(res = tolower(res)) %>%
   group_by(pid, res) %>%
-  summarise(across(c(pupil_mean, pupil_max, pupil_rate), mean), .groups = "drop") %>%
+  summarise(
+    across(c(pupil_mean, pupil_max, pupil_rate), mean),
+    .groups = "drop"
+  ) %>%
   pivot_wider(
     names_from = res,
     values_from = c(pupil_mean, pupil_max, pupil_rate),
@@ -1259,38 +1355,61 @@ param_pid <- read_csv(here("data/param_pid.csv"))
 params_drift <- param_pid |>
   mutate(
     drift_rate_learned = `v_SLearned:lMTRUE` - `v_SLearned:lMFALSE`,
-    drift_rate_novel   = `v_SNovel:lMTRUE` - `v_SNovel:lMFALSE`,
+    drift_rate_novel = `v_SNovel:lMTRUE` - `v_SNovel:lMFALSE`,
   ) |>
   rename(
     drift_learned_false = `v_SLearned:lMFALSE`,
-    drift_learned_true  = `v_SLearned:lMTRUE`,
-    drift_novel_false   = `v_SNovel:lMFALSE`,
-    drift_novel_true    = `v_SNovel:lMTRUE`,
+    drift_learned_true = `v_SLearned:lMTRUE`,
+    drift_novel_false = `v_SNovel:lMFALSE`,
+    drift_novel_true = `v_SNovel:lMTRUE`,
     pid = "subjects"
   ) |>
-  select(pid, drift_rate_novel, drift_rate_learned, drift_novel_true, drift_novel_false, drift_learned_true, drift_learned_false)
+  select(
+    pid,
+    drift_rate_novel,
+    drift_rate_learned,
+    drift_novel_true,
+    drift_novel_false,
+    drift_learned_true,
+    drift_learned_false
+  )
 
 params_thresh <- param_pid |>
   select(subjects, B_lRNovel, B_lRLearned) |>
-  rename(pid = "subjects",
-         threshold_learned = "B_lRLearned",
-         threshold_novel = "B_lRNovel")
+  rename(
+    pid = "subjects",
+    threshold_learned = "B_lRLearned",
+    threshold_novel = "B_lRNovel"
+  )
 
 params_median_drift <- params_drift %>%
   group_by(pid) %>%
-  summarise(across(
-    c(drift_learned_true, drift_learned_false,
-      drift_novel_true, drift_novel_false,
-      drift_rate_learned, drift_rate_novel),
-    median, .names = "{.col}"
-  ), .groups = "drop")
+  summarise(
+    across(
+      c(
+        drift_learned_true,
+        drift_learned_false,
+        drift_novel_true,
+        drift_novel_false,
+        drift_rate_learned,
+        drift_rate_novel
+      ),
+      median,
+      .names = "{.col}"
+    ),
+    .groups = "drop"
+  )
 
 params_median_thresh <- params_thresh %>%
   group_by(pid) %>%
-  summarise(across(
-    c(threshold_novel, threshold_learned),
-    median, .names = "{.col}"
-  ), .groups = "drop")
+  summarise(
+    across(
+      c(threshold_novel, threshold_learned),
+      median,
+      .names = "{.col}"
+    ),
+    .groups = "drop"
+  )
 
 # ---- 3. Merge ----
 full_df_drift <- left_join(params_median_drift, pupil_wide_drift, by = "pid")
@@ -1299,19 +1418,19 @@ full_df_thresh <- left_join(params_median_thresh, pupil_wide_thresh, by = "pid")
 # ---- 4. Define meaningful parameter <-> pupil metric pairings ----
 # Each entry: parameter column name -> matching pupil column suffix (per metric)
 pairings_drift <- tribble(
-  ~param_col,            ~pupil_suffix,
-  "drift_learned_true",  "learned_true",
-  "drift_learned_false", "learned_false",
-  "drift_novel_true",    "novel_true",
-  "drift_novel_false",   "novel_false",
-  "drift_rate_learned",  "learned",
-  "drift_rate_novel",    "novel"
+  ~param_col            , ~pupil_suffix   ,
+  "drift_learned_true"  , "learned_true"  ,
+  "drift_learned_false" , "learned_false" ,
+  "drift_novel_true"    , "novel_true"    ,
+  "drift_novel_false"   , "novel_false"   ,
+  "drift_rate_learned"  , "learned"       ,
+  "drift_rate_novel"    , "novel"
 )
 
 pairings_thresh <- tribble(
-  ~param_col,            ~pupil_suffix,
-  "threshold_learned",   "learned",
-  "threshold_novel",     "novel"
+  ~param_col          , ~pupil_suffix ,
+  "threshold_learned" , "learned"     ,
+  "threshold_novel"   , "novel"
 )
 
 metrics <- c("mean", "max", "rate")
@@ -1333,7 +1452,11 @@ cor_results_drift <- pairings_full_drift %>%
       x <- full_df_drift[[p]]
       y <- full_df_drift[[q]]
       ct <- cor.test(x, y, use = "pairwise.complete.obs")
-      tibble(r = unname(ct$estimate), p_value = ct$p.value, n = sum(complete.cases(x, y)))
+      tibble(
+        r = unname(ct$estimate),
+        p_value = ct$p.value,
+        n = sum(complete.cases(x, y))
+      )
     })
   ) %>%
   unnest(test) %>%
@@ -1345,7 +1468,11 @@ cor_results_thresh <- pairings_full_thresh %>%
       x <- full_df_thresh[[p]]
       y <- full_df_thresh[[q]]
       ct <- cor.test(x, y, use = "pairwise.complete.obs")
-      tibble(r = unname(ct$estimate), p_value = ct$p.value, n = sum(complete.cases(x, y)))
+      tibble(
+        r = unname(ct$estimate),
+        p_value = ct$p.value,
+        n = sum(complete.cases(x, y))
+      )
     })
   ) %>%
   unnest(test) %>%
@@ -1356,24 +1483,30 @@ cor_results_thresh <- pairings_full_thresh %>%
 ```{r}
 #| label: wrangle-plotting-point-estimates
 #| include: false
-metric_levels <- c("Pupil mean (mm)", "Pupil max (mm)", "Rate of pupil change (mm/s)")
+metric_levels <- c(
+  "Pupil mean (mm)",
+  "Pupil max (mm)",
+  "Rate of pupil change (mm/s)"
+)
 
 # Build a long plotting df from one correlation table + its matching data
 build_plot_df <- function(cor_tbl, data) {
   cor_tbl %>%
-    mutate(plot_df = map2(parameter, pupil_column, function(p, q) {
-      data %>%
-        select(pid, x = all_of(p), y = all_of(q))
-    })) %>%
+    mutate(
+      plot_df = map2(parameter, pupil_column, function(p, q) {
+        data %>%
+          select(pid, x = all_of(p), y = all_of(q))
+      })
+    ) %>%
     unnest(plot_df) %>%
     mutate(
       Metric = case_when(
         metric == "mean" ~ "Pupil mean (mm)",
-        metric == "max"  ~ "Pupil max (mm)",
+        metric == "max" ~ "Pupil max (mm)",
         metric == "rate" ~ "Rate of pupil change (mm/s)"
       ),
       Metric = factor(Metric, levels = metric_levels),
-      y = if_else(metric == "rate", y * 1000, y) 
+      y = if_else(metric == "rate", y * 1000, y)
     ) %>%
     select(-pupil_column)
 }
@@ -1381,12 +1514,14 @@ build_plot_df <- function(cor_tbl, data) {
 # ---- Drift rate (pupil metrics coded by STIMULUS) ----
 drift_df <- build_plot_df(cor_results_drift, full_df_drift) %>%
   mutate(
-    Stimulus = factor(if_else(str_detect(parameter, "learned"), "Learned", "Novel"),
-                      levels = c("Learned", "Novel")),
+    Stimulus = factor(
+      if_else(str_detect(parameter, "learned"), "Learned", "Novel"),
+      levels = c("Learned", "Novel")
+    ),
     Accuracy = case_when(
-      str_ends(parameter, "_true")  ~ "True",
+      str_ends(parameter, "_true") ~ "True",
       str_ends(parameter, "_false") ~ "False",
-      TRUE                          ~ "True-False"   # drift_rate_learned / drift_rate_novel
+      TRUE ~ "True-False" # drift_rate_learned / drift_rate_novel
     ),
     Accuracy = factor(Accuracy, levels = c("True", "False", "True-False"))
   )
@@ -1394,39 +1529,58 @@ drift_df <- build_plot_df(cor_results_drift, full_df_drift) %>%
 # ---- Threshold (pupil metrics coded by RESPONSE) ----
 threshold_df <- build_plot_df(cor_results_thresh, full_df_thresh) %>%
   mutate(
-    Response = factor(if_else(str_detect(parameter, "learned"), "Learned", "Novel"),
-                      levels = c("Learned", "Novel"))
+    Response = factor(
+      if_else(str_detect(parameter, "learned"), "Learned", "Novel"),
+      levels = c("Learned", "Novel")
+    )
   )
-
 ```
 
 
 ```{r}
 #| label: plot-point-estimates
 #| include: false
-make_metric_plot <- function(df, group_var,
-                             x_lab = "LBA parameter (median posterior value)") {
-
+make_metric_plot <- function(
+  df,
+  group_var,
+  x_lab = "LBA parameter (median posterior value)"
+) {
   stats <- df %>%
     distinct(across(all_of(c("Metric", group_var))), r) %>%
     arrange(Metric, .data[[group_var]]) %>%
     group_by(Metric) %>%
-    mutate(line  = row_number(),
-           label = sprintf("%s: r = %.2f", .data[[group_var]], r)) %>%
+    mutate(
+      line = row_number(),
+      label = sprintf("%s: r = %.2f", .data[[group_var]], r)
+    ) %>%
     ungroup()
 
-  ggplot(df, aes(x = x, y = y,
-                 colour = .data[[group_var]], fill = .data[[group_var]])) +
+  ggplot(
+    df,
+    aes(x = x, y = y, colour = .data[[group_var]], fill = .data[[group_var]])
+  ) +
     geom_point(size = 1.2, alpha = 0.7) +
     geom_smooth(method = "lm", se = TRUE, alpha = 0.15, linewidth = 0.7) +
     geom_text(
       data = stats,
-      aes(x = -Inf, y = Inf, label = label, vjust = 1.4 * line,
-          colour = .data[[group_var]]),
-      hjust = -0.05, size = 2.6, inherit.aes = FALSE, show.legend = FALSE
+      aes(
+        x = -Inf,
+        y = Inf,
+        label = label,
+        vjust = 1.4 * line,
+        colour = .data[[group_var]]
+      ),
+      hjust = -0.05,
+      size = 2.6,
+      inherit.aes = FALSE,
+      show.legend = FALSE
     ) +
-    facet_wrap(~ Metric, nrow = 1, scales = "free",
-               labeller = label_wrap_gen(width = 20)) +
+    facet_wrap(
+      ~Metric,
+      nrow = 1,
+      scales = "free",
+      labeller = label_wrap_gen(width = 20)
+    ) +
     scale_y_continuous(expand = expansion(mult = c(0.05, 0.35))) +
     scale_colour_manual(values = myColors_4, name = group_var) +
     scale_fill_manual(values = myColors_4, name = group_var) +
@@ -1435,24 +1589,26 @@ make_metric_plot <- function(df, group_var,
 
 # ---- Drift rate: one plot per accuracy level ----
 drift_x_labs <- c(
-  "True"       = "Drift rate TRUE (median posterior value)",
-  "False"      = "Drift rate FALSE (median posterior value)",
+  "True" = "Drift rate TRUE (median posterior value)",
+  "False" = "Drift rate FALSE (median posterior value)",
   "True-False" = "Drift rate TRUE \u2212 FALSE (median posterior value)"
 )
 
 drift_plots <- levels(drift_df$Accuracy) %>%
   set_names() %>%
-  map(~ make_metric_plot(
-    drift_df %>% filter(Accuracy == .x),
-    group_var = "Stimulus",
-    x_lab     = drift_x_labs[[.x]]
-  ))
+  map(
+    ~ make_metric_plot(
+      drift_df %>% filter(Accuracy == .x),
+      group_var = "Stimulus",
+      x_lab = drift_x_labs[[.x]]
+    )
+  )
 
 # ---- Threshold ----
 p_threshold <- make_metric_plot(
   threshold_df,
   group_var = "Response",
-  x_lab     = "Threshold (median posterior value)"
+  x_lab = "Threshold (median posterior value)"
 )
 ```
 
@@ -1487,15 +1643,15 @@ If the 95% CI of the distribution does not include 0, we would be confident in t
 params_samples <- param_pid %>%
   mutate(
     drift_rate_learned = `v_SLearned:lMTRUE` - `v_SLearned:lMFALSE`,
-    drift_rate_novel   = `v_SNovel:lMTRUE`   - `v_SNovel:lMFALSE`
+    drift_rate_novel = `v_SNovel:lMTRUE` - `v_SNovel:lMFALSE`
   ) %>%
   rename(
-    threshold_learned   = B_lRLearned,
-    threshold_novel     = B_lRNovel,
+    threshold_learned = B_lRLearned,
+    threshold_novel = B_lRNovel,
     drift_learned_false = `v_SLearned:lMFALSE`,
-    drift_learned_true  = `v_SLearned:lMTRUE`,
-    drift_novel_false   = `v_SNovel:lMFALSE`,
-    drift_novel_true    = `v_SNovel:lMTRUE`,
+    drift_learned_true = `v_SLearned:lMTRUE`,
+    drift_novel_false = `v_SNovel:lMFALSE`,
+    drift_novel_true = `v_SNovel:lMTRUE`,
     pid = "subjects"
   ) %>%
   group_by(pid) %>%
@@ -1503,27 +1659,36 @@ params_samples <- param_pid %>%
   ungroup()
 
 # Pupil values repeat across all draws per pid
-params_merged_drift  <- params_samples %>% left_join(pupil_wide_drift,  by = "pid")
-params_merged_thresh <- params_samples %>% left_join(pupil_wide_thresh, by = "pid")
+params_merged_drift <- params_samples %>%
+  left_join(pupil_wide_drift, by = "pid")
+params_merged_thresh <- params_samples %>%
+  left_join(pupil_wide_thresh, by = "pid")
 
 # ---- 7. r for every draw, for every pairing ----
 cor_by_draw <- function(pairings, data) {
-  data_split <- split(data, data$.draw)   # split once, reuse for every pairing
+  data_split <- split(data, data$.draw) # split once, reuse for every pairing
   draws <- as.numeric(names(data_split))
 
   pairings %>%
-    mutate(res = map2(param_col, pupil_col, function(p, q) {
-      tibble(
-        sample = draws,
-        r = vapply(data_split, function(d)
-          cor(d[[p]], d[[q]], use = "pairwise.complete.obs"), numeric(1))
-      )
-    })) %>%
+    mutate(
+      res = map2(param_col, pupil_col, function(p, q) {
+        tibble(
+          sample = draws,
+          r = vapply(
+            data_split,
+            function(d) {
+              cor(d[[p]], d[[q]], use = "pairwise.complete.obs")
+            },
+            numeric(1)
+          )
+        )
+      })
+    ) %>%
     unnest(res) %>%
     select(parameter = param_col, metric, pupil_column = pupil_col, sample, r)
 }
 
-cor_samples_drift  <- cor_by_draw(pairings_full_drift,  params_merged_drift)
+cor_samples_drift <- cor_by_draw(pairings_full_drift, params_merged_drift)
 cor_samples_thresh <- cor_by_draw(pairings_full_thresh, params_merged_thresh)
 ```
 
@@ -1534,22 +1699,29 @@ add_metric_label <- function(df) {
   df %>%
     select(-pupil_column) %>%
     mutate(
-      Metric = factor(metric,
-                      levels = c("mean", "max", "rate"),
-                      labels = c("Pupil mean (mm)", "Pupil max (mm)",
-                                 "Rate of pupil change (mm/s)"))
+      Metric = factor(
+        metric,
+        levels = c("mean", "max", "rate"),
+        labels = c(
+          "Pupil mean (mm)",
+          "Pupil max (mm)",
+          "Rate of pupil change (mm/s)"
+        )
+      )
     )
 }
 
 # ---- Drift rate (pupil metrics coded by STIMULUS) ----
 drift_post <- add_metric_label(cor_samples_drift) %>%
   mutate(
-    Stimulus = factor(if_else(str_detect(parameter, "learned"), "Learned", "Novel"),
-                      levels = c("Learned", "Novel")),
+    Stimulus = factor(
+      if_else(str_detect(parameter, "learned"), "Learned", "Novel"),
+      levels = c("Learned", "Novel")
+    ),
     Accuracy = case_when(
-      str_ends(parameter, "_true")  ~ "True",
+      str_ends(parameter, "_true") ~ "True",
       str_ends(parameter, "_false") ~ "False",
-      TRUE                          ~ "True-False"
+      TRUE ~ "True-False"
     ),
     Accuracy = factor(Accuracy, levels = c("True", "False", "True-False"))
   )
@@ -1557,8 +1729,10 @@ drift_post <- add_metric_label(cor_samples_drift) %>%
 # ---- Threshold (pupil metrics coded by RESPONSE) ----
 threshold_post <- add_metric_label(cor_samples_thresh) %>%
   mutate(
-    Response = factor(if_else(str_detect(parameter, "learned"), "Learned", "Novel"),
-                      levels = c("Learned", "Novel"))
+    Response = factor(
+      if_else(str_detect(parameter, "learned"), "Learned", "Novel"),
+      levels = c("Learned", "Novel")
+    )
   )
 ```
 
@@ -1566,19 +1740,30 @@ threshold_post <- add_metric_label(cor_samples_thresh) %>%
 #| label: plot-plausible-values
 #| include: false
 make_posterior_plot <- function(df, group_var, title = NULL) {
-
   stopifnot("No data for this plot - check the pairings/columns" = nrow(df) > 0)
 
-  ggplot(df, aes(x = r, y = .data[[group_var]],
-                 fill = .data[[group_var]], colour = .data[[group_var]])) +
+  ggplot(
+    df,
+    aes(
+      x = r,
+      y = .data[[group_var]],
+      fill = .data[[group_var]],
+      colour = .data[[group_var]]
+    )
+  ) +
     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
-    stat_halfeye(point_interval = median_hdi, .width = c(0.66, 0.95),
-                 slab_alpha = 0.6, point_size = 1.5) +
-    facet_wrap(~ Metric, nrow = 1,
-               labeller = label_wrap_gen(width = 20)) +
+    stat_halfeye(
+      point_interval = median_hdi,
+      .width = c(0.66, 0.95),
+      slab_alpha = 0.6,
+      point_size = 1.5
+    ) +
+    facet_wrap(~Metric, nrow = 1, labeller = label_wrap_gen(width = 20)) +
     coord_cartesian(xlim = c(-1, 1)) +
-    scale_x_continuous(breaks = seq(-1, 1, 0.5),
-                       labels = c("-1", "", "0", "", "1")) +
+    scale_x_continuous(
+      breaks = seq(-1, 1, 0.5),
+      labels = c("-1", "", "0", "", "1")
+    ) +
     scale_colour_manual(values = myColors_4) +
     scale_fill_manual(values = myColors_4) +
     labs(title = title, x = "Posterior correlation (r)", y = NULL) +
@@ -1588,10 +1773,12 @@ make_posterior_plot <- function(df, group_var, title = NULL) {
 # ---- Drift rate: one plot per accuracy level ----
 drift_post_plots <- levels(drift_post$Accuracy) %>%
   set_names() %>%
-  map(~ make_posterior_plot(
-    drift_post %>% filter(Accuracy == .x),
-    group_var = "Stimulus"
-  ))
+  map(
+    ~ make_posterior_plot(
+      drift_post %>% filter(Accuracy == .x),
+      group_var = "Stimulus"
+    )
+  )
 
 # ---- Threshold ----
 p_threshold_post <- make_posterior_plot(threshold_post, group_var = "Response")
@@ -1632,37 +1819,54 @@ cor_wide <- bind_rows(drift_post, threshold_post) %>%
   mutate(
     Parameter = if_else(str_starts(parameter, "drift"), "Drift", "Threshold"),
     Condition = if_else(str_detect(parameter, "learned"), "Learned", "Novel"),
-    Accuracy  = case_when(
-      str_ends(parameter, "_true")      ~ "TRUE",
-      str_ends(parameter, "_false")     ~ "FALSE",
+    Accuracy = case_when(
+      str_ends(parameter, "_true") ~ "TRUE",
+      str_ends(parameter, "_false") ~ "FALSE",
       str_starts(parameter, "drift_rate") ~ "TRUE-FALSE",
-      TRUE                              ~ "-"
+      TRUE ~ "-"
     ),
-    med  = sprintf("%.2f", r),
-    qi   = sprintf("[%.2f, %.2f]", .lower, .upper),
+    med = sprintf("%.2f", r),
+    qi = sprintf("[%.2f, %.2f]", .lower, .upper),
     sign = case_when(.lower > 0 ~ "pos", .upper < 0 ~ "neg", TRUE ~ "none")
   ) %>%
-  filter(Accuracy %in% c("-", "TRUE-FALSE")) %>%     # main text: drop TRUE / FALSE rows
+  filter(Accuracy %in% c("-", "TRUE-FALSE")) %>% # main text: drop TRUE / FALSE rows
   select(Parameter, Condition, Accuracy, metric, med, qi, sign) %>%
-  pivot_wider(names_from = metric, values_from = c(med, qi, sign),
-              names_glue = "{.value}_{metric}") %>%
-  arrange(factor(Parameter, levels = c("Threshold", "Drift")),
-          Condition,
-          factor(Accuracy, levels = c("-", "TRUE", "FALSE", "TRUE-FALSE")))
+  pivot_wider(
+    names_from = metric,
+    values_from = c(med, qi, sign),
+    names_glue = "{.value}_{metric}"
+  ) %>%
+  arrange(
+    factor(Parameter, levels = c("Threshold", "Drift")),
+    Condition,
+    factor(Accuracy, levels = c("-", "TRUE", "FALSE", "TRUE-FALSE"))
+  )
 
 # Display table: repeated column names are fine, the metric sits in the group header
 tab_df <- cor_wide %>%
-  select(Parameter, Condition,
-         med_mean, qi_mean, med_max, qi_max, med_rate, qi_rate) %>%
+  select(
+    Parameter,
+    Condition,
+    med_mean,
+    qi_mean,
+    med_max,
+    qi_max,
+    med_rate,
+    qi_rate
+  ) %>%
   as.data.frame()
 names(tab_df) <- c("Parameter", "Condition", rep(c("Median r", "95% QI"), 3))
 
 
 metric_cols <- list(mean = 3:4, max = 5:6, rate = 7:8)
 
-tab <- tt(tab_df,
-          notes = "Note. Blue = 95% QI entirely above zero; red = 95% QI entirely below zero.") |>
-  group_tt(j = list("Pupil mean" = 3:4, "Pupil max" = 5:6, "Pupil change rate" = 7:8)) |>
+tab <- tt(
+  tab_df,
+  notes = "Note. Blue = 95% QI entirely above zero; red = 95% QI entirely below zero."
+) |>
+  group_tt(
+    j = list("Pupil mean" = 3:4, "Pupil max" = 5:6, "Pupil change rate" = 7:8)
+  ) |>
   style_tt(i = 0, bold = TRUE) |>
   style_tt(i = 1:nrow(tab_df), fontsize = 0.7) |>
   style_tt(i = 0, fontsize = 0.8) |>
@@ -1670,8 +1874,22 @@ tab <- tt(tab_df,
 
 for (m in names(metric_cols)) {
   s <- cor_wide[[paste0("sign_", m)]]
-  if (any(s == "pos")) tab <- style_tt(tab, i = which(s == "pos"), j = metric_cols[[m]], color = "#2166AC")
-  if (any(s == "neg")) tab <- style_tt(tab, i = which(s == "neg"), j = metric_cols[[m]], color = "#B2182B")
+  if (any(s == "pos")) {
+    tab <- style_tt(
+      tab,
+      i = which(s == "pos"),
+      j = metric_cols[[m]],
+      color = "#2166AC"
+    )
+  }
+  if (any(s == "neg")) {
+    tab <- style_tt(
+      tab,
+      i = which(s == "neg"),
+      j = metric_cols[[m]],
+      color = "#B2182B"
+    )
+  }
 }
 tab
 ```
@@ -1700,20 +1918,31 @@ alpha_draws <- EMC2::parameters(joint_fit, selection = "alpha") |>
 #| include: false
 alpha_contrasts <- alpha_draws |>
   mutate(
-    drift_effect_novel = (`behavior|v_SNovel:lMTRUE` - `behavior|v_SNovel:lMFALSE`),
-    drift_effect_learned = (`behavior|v_SLearned:lMTRUE` - `behavior|v_SLearned:lMFALSE`),
-    pupil_effect_novel =(`pupil_mean|novel_true` - `pupil_mean|novel_false`),
-    pupil_effect_learned = (`pupil_mean|learned_true` - `pupil_mean|learned_false`)
+    drift_effect_novel = (`behavior|v_SNovel:lMTRUE` -
+      `behavior|v_SNovel:lMFALSE`),
+    drift_effect_learned = (`behavior|v_SLearned:lMTRUE` -
+      `behavior|v_SLearned:lMFALSE`),
+    pupil_effect_novel = (`pupil_mean|novel_true` - `pupil_mean|novel_false`),
+    pupil_effect_learned = (`pupil_mean|learned_true` -
+      `pupil_mean|learned_false`)
   ) |>
-  select(subjects, draw, drift_effect_novel, drift_effect_learned, pupil_effect_novel, pupil_effect_learned) 
+  select(
+    subjects,
+    draw,
+    drift_effect_novel,
+    drift_effect_learned,
+    pupil_effect_novel,
+    pupil_effect_learned
+  )
 
 mean_pupil <- alpha_contrasts |>
   group_by(subjects) |>
-  summarise(mean_pupil_effect_novel = mean(pupil_effect_novel),
-         mean_pupil_effect_learned = mean(pupil_effect_learned))
+  summarise(
+    mean_pupil_effect_novel = mean(pupil_effect_novel),
+    mean_pupil_effect_learned = mean(pupil_effect_learned)
+  )
 alpha_contrasts <- alpha_contrasts |>
-  left_join(mean_pupil, by= "subjects")
-
+  left_join(mean_pupil, by = "subjects")
 
 
 contrast_corr_draws_novel <- alpha_contrasts |>
@@ -1722,11 +1951,14 @@ contrast_corr_draws_novel <- alpha_contrasts |>
 
 contrast_corr_draws_learned <- alpha_contrasts |>
   group_by(draw) |>
-  summarise(r = cor(drift_effect_learned, mean_pupil_effect_learned), .groups = "drop")
+  summarise(
+    r = cor(drift_effect_learned, mean_pupil_effect_learned),
+    .groups = "drop"
+  )
 
 combined_draws <- bind_rows(
   contrast_corr_draws_learned |> mutate(condition = "Learned"),
-  contrast_corr_draws_novel   |> mutate(condition = "Novel")
+  contrast_corr_draws_novel |> mutate(condition = "Novel")
 ) |>
   mutate(condition = factor(condition, levels = c("Learned", "Novel")))
 
@@ -1735,23 +1967,27 @@ combined_draws <- bind_rows(
 point_estimates_corr_novel <- alpha_contrasts |>
   select(subjects, draw, drift_effect_novel, pupil_effect_novel) |>
   group_by(subjects) |>
-  summarise(median_drift = median(drift_effect_novel),
-            mean_pupil = mean(pupil_effect_novel)) |>
+  summarise(
+    median_drift = median(drift_effect_novel),
+    mean_pupil = mean(pupil_effect_novel)
+  ) |>
   ungroup() |>
   mutate(r = cor(median_drift, mean_pupil))
 
 point_estimates_corr_learned <- alpha_contrasts |>
   select(subjects, draw, drift_effect_learned, pupil_effect_learned) |>
   group_by(subjects) |>
-  summarise(median_drift = median(drift_effect_learned),
-            mean_pupil = mean(pupil_effect_learned)) |>
-    ungroup() |>
+  summarise(
+    median_drift = median(drift_effect_learned),
+    mean_pupil = mean(pupil_effect_learned)
+  ) |>
+  ungroup() |>
   mutate(r = cor(median_drift, mean_pupil))
 
 
 combined_df <- bind_rows(
   point_estimates_corr_learned |> mutate(condition = "Learned"),
-  point_estimates_corr_novel   |> mutate(condition = "Novel")
+  point_estimates_corr_novel |> mutate(condition = "Novel")
 ) |>
   mutate(condition = factor(condition, levels = c("Learned", "Novel")))
 
@@ -1759,20 +1995,25 @@ combined_df <- bind_rows(
 r_labels <- combined_df |>
   distinct(condition, r) |>
   mutate(label = paste0("R = ", round(r, 2)))
-
 ```
 
 ```{r}
 #| label: plot-joint-modelling
 #| include: false
 
-plot_post_joint_point <-ggplot(combined_df, aes(x = median_drift, y = mean_pupil, color = condition)) +
+plot_post_joint_point <- ggplot(
+  combined_df,
+  aes(x = median_drift, y = mean_pupil, color = condition)
+) +
   geom_point(size = 1.5) +
   geom_smooth(method = "lm", se = TRUE, fill = "grey70") +
   geom_text(
     data = r_labels,
     aes(x = -Inf, y = Inf, label = label),
-    hjust = -0.15, vjust = 1.8, inherit.aes = FALSE, size = annot_size
+    hjust = -0.15,
+    vjust = 1.8,
+    inherit.aes = FALSE,
+    size = annot_size
   ) +
   facet_wrap(~condition, scales = "free") +
   scale_color_manual(values = myColors_4) +
@@ -1782,7 +2023,10 @@ plot_post_joint_point <-ggplot(combined_df, aes(x = median_drift, y = mean_pupil
   ) +
   theme(legend.position = "none")
 
-plot_post_joint_plausible <- ggplot(combined_draws, aes(x = r, y = condition, fill = condition)) +
+plot_post_joint_plausible <- ggplot(
+  combined_draws,
+  aes(x = r, y = condition, fill = condition)
+) +
   ggdist::stat_halfeye() +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
   scale_fill_manual(values = myColors_4) +
@@ -1800,7 +2044,9 @@ joint_summ <- combined_draws |>
   group_by(condition) |>
   median_qi(r)
 
-jr  <- function(cond, what) sprintf("%.2f", joint_summ[[what]][joint_summ$condition == cond])
+jr <- function(cond, what) {
+  sprintf("%.2f", joint_summ[[what]][joint_summ$condition == cond])
+}
 jpe <- function(cond) sprintf("%.2f", r_labels$r[r_labels$condition == cond])
 ```
 
@@ -1820,7 +2066,7 @@ plot_post_joint_plausible
 
 # Discussion
 
-In this study, we combined pupillometry with evidence-accumulation modelling to examine how the latent decision processes underlying face recognition relate to pupil dynamics. We had two main aims: to replicate the pupil old/new effect with faces, and to estimate how drift rate and threshold relate to different pupil metrics. First, learned faces elicited larger pupil responses than novel faces across all three metrics, especially on correct trials, confirming that our paradigm captured this well-established effect. Second, the threshold for "learned" responses was associated with the rate of pupil change, suggesting that pupil metrics are not interchangeable. Third, the relationship between drift rate and pupil size reversed across stimulus conditions, and an exploratory joint model reproduced this reversal. Together, these findings show the added value of linking the latent computational parameters of decision models to physiological markers of cognitive state, such as pupil dynamics. Accuracy-based analyses cannot estimate associations of this kind, because response caution and the quality of evidence accumulation are not directly observable; they can only be estimated once a computational model of the decision process is fitted to the data
+In this study, we combined pupillometry with evidence-accumulation modelling to examine how the latent decision processes underlying face recognition relate to pupil dynamics. We first established that the pupil old/new effect is detectable in the context of face recognition memory. We then extended this finding to show how a physiological marker of a memory trace, as indexed by pupil size, is associated with specific computational parameters that govern the decision-making process, such as threshold and drift-rate. Together, these findings show the added value of linking the latent computational parameters of decision models to physiological markers of cognitive state, such as pupil dynamics. Accuracy-based analyses cannot estimate associations of this kind, because response caution and the quality of evidence accumulation are not directly observable; they can only be estimated once a computational model of the decision process is fitted to the data.
 
 Across all three pupil metrics, previously learned faces elicited larger pupillary responses than novel faces, replicating the well-established pupil old/new effect in a face recognition paradigm [@Vo2008; @Otero2011]. This effect was not limited to mean dilation but extended to peak pupil size and the rate of pupil change. This convergence across metrics strengthens confidence that the effect reflects a genuine condition-level difference and is broadly consistent with the recent meta-analytic estimate of the effect's reliability across the pupillometric literature [@Lapteva2024]. 
 
