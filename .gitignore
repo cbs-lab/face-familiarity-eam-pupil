@@ -1,0 +1,11 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+models/
+samples/
+data/
+figures/preprocessing/
+/.quarto/
+
+**/*.quarto_ipynb

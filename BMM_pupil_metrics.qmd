@@ -1,0 +1,163 @@
+---
+title: "BMM_pupil_metrics"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: setup
+#| include: false
+pkgs <- c(
+  "tidyverse",
+  "tinytable",
+  "RColorBrewer",
+  "patchwork",
+  "paletteer",
+  "here",
+  "EMC2",
+  "tidybayes",
+  "tinytable",
+  "osfr",
+  "svglite",
+  "gt",
+  "brms",
+  "corrplot",
+  "ggdist",
+  "parallel",
+  "future",
+  "ggplot2",
+  "ggh4x"
+)
+vapply(
+  pkgs,
+  library,
+  logical(1),
+  character.only = TRUE,
+  logical.return = TRUE
+)
+
+knitr::opts_chunk$set(echo = FALSE)
+
+theme_set(
+  theme_bw() +
+    theme(
+      text = element_text(size = 15, face = "bold"),
+      title = element_text(size = 15, face = "bold"),
+      legend.position = "none"
+    )
+)
+## plot settings ##
+## Plot colors
+safe_pal <- paletteer_d("rcartocolor::Safe", 4)
+dark_pal <- paletteer_d("RColorBrewer::Dark2", 2)
+
+myColors_3 <- c(
+  "novel" = safe_pal[1],
+  "learned" = safe_pal[2]
+)
+myColors_4 <- c(
+  "Novel" = safe_pal[1],
+  "Learned" = safe_pal[2]
+)
+
+#Accuracy colors
+myColors_acc <- c(
+  "true" = dark_pal[1],
+  "false" = dark_pal[2]
+)
+myColors_acc_2 <- c(
+  "TRUE" = dark_pal[1],
+  "FALSE" = dark_pal[2]
+)
+# Subsets for single-experiment plots if still needed
+myColors_1 <- myColors_3[c("novel", "learned")]
+
+
+## Set the amount of dodge in figures
+pd <- position_dodge(0.7)
+pd2 <- position_dodge(1)
+```
+
+This a code to fit Bayesian multilevel mixed effect model to the pupil metrics (mean pupil size, maximum pupil size and rate of pupil change)  
+
+
+```{r}
+#|label: laod-data
+#|include: false
+data_pupil_mean <- read_csv(here("data/pupil_metrics/mean_pid.csv"))
+data_pupil_max <- read_csv(here("data/pupil_metrics/max_pid.csv"))
+data_pupil_rate <- read_csv(here("data/pupil_metrics/rate_pid.csv"))
+
+#Wrangle
+data_pupil <- data_pupil_mean |>
+  mutate(pupil_mean = mean,
+         pupil_max = data_pupil_max$mean,
+         pupil_rate = data_pupil_rate$mean_pupil_change) |>
+  select(pid, condition, accuracy, pupil_mean, pupil_max, pupil_rate) |>
+  mutate(accuracy = factor(accuracy, levels = c(1, 0),
+                           labels = c("correct", "incorrect"))) |>
+  rename(cond = condition, acc = accuracy) |>
+  mutate(int_cond = factor(paste(cond, acc, sep = "_"),
+                           levels = c("Learned_correct", "Learned_incorrect",
+                                      "Novel_correct", "Novel_incorrect"))) |>
+  select(pid, int_cond, pupil_mean, pupil_max, pupil_rate)
+
+```
+
+```{r}
+#|label: model-function
+#|indlude: false
+library(brms)
+library(purrr)
+library(dplyr)
+
+metrics <- c("pupil_mean", "pupil_max", "pupil_rate")  # replace with your column names
+
+data_pupl <- data_pupil %>%
+  mutate(int_cond = factor(int_cond,
+    levels = c("Learned_correct", "Learned_incorrect", "Novel_correct", "Novel_incorrect")))
+
+fit_metric <- function(metric) {
+  # Standardise so the same weakly-informative priors suit every metric
+  d <- data_pupil %>% mutate(y = as.numeric(scale(.data[[metric]])))
+
+  brm(
+    formula = bf(y ~ 0 + int_cond + (1 | pid)),
+    data    = d,
+    family  = gaussian(),
+    prior   = c(
+      prior(normal(0, 1), class = "b"),        # cell means on the z scale
+      prior(exponential(1), class = "sd"),     # participant SD
+      prior(exponential(1), class = "sigma")
+    ),
+    chains = 4, cores = 4, iter = 4000, warmup = 1000,
+    control = list(adapt_delta = 0.95),
+    seed = 2026,
+    file = paste0("models/fit_", metric)
+  )
+}
+
+fits <- set_names(map(metrics, fit_metric), metrics)
+```
+
+```{r}
+#|label: model-contrasts
+#|indlude: false
+contrasts <- c(
+  "Familiarity (Learned - Novel)" =
+    "(int_condLearned_correct + int_condLearned_incorrect)/2 - (int_condNovel_correct + int_condNovel_incorrect)/2 = 0",
+  "Accuracy (Correct - Incorrect)" =
+    "(int_condLearned_correct + int_condNovel_correct)/2 - (int_condLearned_incorrect + int_condNovel_incorrect)/2 = 0",
+  "Interaction" =
+    "(int_condLearned_correct - int_condLearned_incorrect) - (int_condNovel_correct - int_condNovel_incorrect) = 0"
+)
+
+map(fits, ~ hypothesis(.x, contrasts))
+
+contrasts_dir <- sub("= 0", "> 0", contrasts)
+map(fits, ~ hypothesis(.x, contrasts_dir))
+```
+
+
+
+

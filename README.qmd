@@ -1,0 +1,18 @@
+---
+title: "README"
+author: "Raphaël Fournier, Richard Ramsey"
+format: html
+editor: visual
+---
+
+
+
+
+
+
+This is the pupil preprocessing file when you have data from both eyes.
+
+The same basic workflow is used here, as was detailed in the preprocess.Rmd file, which focused on preprocessing data for one eye.
+Therefore, I will not repeat any details here.
+For a description of the basic workflow and functions, see the preprocess.Rmd file.
+Here, I'll just show you the steps that you might take to preprocess and combine pupil data for both eyes.

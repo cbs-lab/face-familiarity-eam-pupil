@@ -1,0 +1,761 @@
+---
+title: "GAMM_pupil"
+author: "Fournier Raphaël"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# load the libraries that we will be using #
+
+## install ##
+
+```{r install-pkg}
+install.packages("remotes")
+remotes::install_github("stan-dev/cmdstanr")
+
+install.packages("devtools")
+devtools::install_github("jmgirard/standist")
+# 
+install.packages(c("tidyverse", "RColorBrewer", "patchwork", "brms",
+                   "tidybayes", "bayesplot", "future"))
+```
+
+## load ##
+
+```{r load-pkg}
+pkg <- c("cmdstanr", "standist", "tidyverse", "RColorBrewer", "patchwork", 
+         "brms", "tidybayes", "bayesplot", "future", "parallel", "rstan", 
+         "here", "flextable", "modelr","paletteer")
+
+lapply(pkg, library, character.only = TRUE)
+```
+
+## settings ##
+
+```{r set-options}
+options(brms.backend = "cmdstanr",
+        mc.cores = parallel::detectCores(),
+        future.fork.enable = TRUE,
+        future.rng.onMisuse = "ignore") ## automatically set in RStudio
+
+rstan_options(auto_write = TRUE)
+
+supportsMulticore()
+
+detectCores()
+```
+
+## plot settings ##
+
+theme settings for ggplot
+
+```{r, eval = F}
+theme_set(
+  theme_bw() +
+    theme(text = element_text(size = 18, face = "bold"), 
+          title = element_text(size = 18, face = "bold"),
+          legend.position = "bottom")
+)
+safe_pal <- paletteer_d("rcartocolor::Safe", 4)
+
+myColors_4 <- c(
+  "Novel" = safe_pal[1],
+  "Learned" = safe_pal[2]
+)
+## Set the amount of dodge in figures
+pd <- position_dodge(0.7)
+pd2 <- position_dodge(1)
+```
+
+## table settings ##
+
+```{r}
+set_flextable_defaults(
+  theme_fun = theme_vanilla,
+  background.color = "white"
+)
+```
+
+```{r}
+data <- read_csv("data/clean_pupil_data_binned.csv") 
+head(data)
+str(data)
+
+datam <- data |>
+  filter(time >=0 & time <=2400) |>
+  mutate(accuracy = as.factor(accuracy),
+         accuracy = fct_recode(accuracy, false = "0", true = "1"),
+         condition = as.factor(condition),
+         condition = fct_recode(condition, Learned = "learned", Novel = "unfamiliar"),
+         int_cond = interaction(condition, accuracy, sep = "."),
+         int_cond = as.factor(int_cond))
+
+#save data
+write_csv(datam, "data/datam_processed.csv")
+```
+
+# section 1 #
+
+## quick plot to check the data look as they should ##
+
+create summary data at the pid level
+
+```{r}
+data_pid_acc <- datam %>%
+  group_by(pid, time, int_cond) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(trial/2)), # 
+            sem = (sd/sqrt(length(unique(trial/2)))),
+            ci = sem*1.96)
+head(data_pid_acc)
+```
+
+create summary data at the group level
+
+```{r}
+data_group_acc <- datam %>%
+  group_by(int_cond, time) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(pid)), # n here is the total pids per condition
+            sem = (sd/sqrt(length(unique(pid)))),
+            ci = sem*1.96)
+head(data_group_acc)
+```
+
+```{r}
+data_group_acc_no_index <- datam %>%
+  group_by(condition, time, accuracy) %>% 
+  summarise(mean = mean(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            sd = sd(`Pupil_Diameter_bc.mm`, na.rm = TRUE),
+            n = length(unique(pid)), # n here is the total pids per condition
+            sem = (sd/sqrt(length(unique(pid)))),
+            ci = sem*1.96)
+head(data_group_acc_no_index)
+
+
+```
+diff-accuracy
+```{r}
+diff_summary <- data_group_acc_no_index %>%
+  select(condition, time, accuracy, mean, sem) %>%
+  pivot_wider(names_from = accuracy, values_from = c(mean, sem)) %>%
+  mutate(mean_diff = mean_true - mean_false,
+         sem_diff = sqrt(sem_true^2 + sem_false^2)) %>%
+  select(condition, time, mean_diff, sem_diff)
+```
+
+
+
+## ribbon plot ##
+
+with sem at the pid level
+
+```{r}
+p1.1 <- ggplot(data_pid_acc,
+               aes(x = time, y = mean, fill = accuracy)) +
+  geom_line(aes(colour = accuracy), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  scale_colour_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_x_continuous(breaks=seq(1500,4000,500),
+                     labels= seq(0,2.5, 0.5)) +
+  scale_y_continuous(limits=c(-0.25, 0.75),
+                     breaks = seq(-0.25, 0.75, 0.25)) +
+  facet_grid(condition~pid) 
+p1.1
+```
+
+with sem at the group level
+
+```{r}
+p1.2 <- ggplot(data_group_acc,
+               aes(x = time, y = mean, fill = int_cond)) +
+  geom_line(aes(colour = int_cond), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean-sem, ymax=mean+sem), alpha = 0.5) +
+  scale_colour_brewer(palette = "Dark2") +
+  scale_x_continuous(breaks=seq(0,2400,400),
+                     labels= seq(0,2.4, 0.4)) +
+  scale_y_continuous(limits=c(-0.25, 0.5),
+                     breaks = seq(-0.25, 0.5, 0.25)) +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(title = "Mean pupil size")
+p1.2
+
+ggsave("figures/plot_mean_intr_cond.jpeg", width = 10, height = 8, dpi = 150)
+```
+
+
+diff_plots
+```{r}
+p1.2 <- ggplot(diff_summary,
+               aes(x = time, y = mean_diff, fill = condition)) +
+  geom_line(aes(colour = condition), alpha = 1, linewidth = 1) +
+  geom_ribbon(aes(ymin=mean_diff-sem_diff, ymax=mean_diff+sem_diff), alpha = 0.5) +
+  geom_hline(yintercept = 0, linetype = "solid", colour = "darkred") +
+  scale_colour_brewer(palette = "Dark2") +
+  scale_x_continuous(breaks=seq(0,2400,400),
+                     labels= seq(0,2.4, 0.4)) +
+  scale_y_continuous(limits=c(-0.25, 0.25),
+                     breaks = seq(-0.25, 0.25, 0.25)) +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(title = "Pupil size difference between true and false")+
+  ylab("Pupil size (mm)")
+p1.2
+
+ggsave("figures/plot_mean_diff_acc.jpeg", width = 10, height = 8, dpi = 150)
+```
+
+
+
+
+
+# section 2 #
+
+#Load model
+```{r}
+bp1 <- readRDS("models/model_interaction.rds")
+```
+
+
+## build some models ##
+
+## b1 - accuracy x condition ##
+
+## index coding ##
+```{r}
+index_data <- datam %>%
+  select(pid, trial, time, `Pupil_Diameter_bc.mm`, condition, accuracy) %>%
+  mutate(int_cond = as.factor(interaction(condition,accuracy)) %>%
+           relevel(ref = "Novel.true"))
+```
+
+## formula ##
+
+```{r}
+formula = bf(`Pupil_Diameter_bc.mm` ~ 1 + int_cond +
+               s(time, by = int_cond, bs = "bs", k = 10) +
+               s(time, pid, bs = "fs", xt = list(bs = "bs")))
+```
+
+```{r}
+get_prior(formula,
+          data = index_data, family = gaussian())
+```
+## set priors ##
+
+```{r}
+priors <- c(
+  set_prior("normal(0, 0.25)", class = "Intercept"),
+  set_prior("normal(0, 0.25)", class = "b"),
+  set_prior("normal(0, 0.25)", class = "sds"),
+  set_prior("normal(0, 0.25)", class = "sigma")
+)
+```
+
+#Model 1
+```{r}
+plan(multicore)
+bp1 <- brm(formula = formula,
+        data = index_data, family = gaussian(),
+        prior = priors,
+        iter = 2000, warmup = 1000, cores = 8, chains = 4,
+        save_pars = save_pars(all=TRUE),
+        control = list(adapt_delta = 0.99),
+        seed = 123,
+        file = "models/GAMM_pupil")
+summary(bp1)
+```
+
+#Just checking autocorrelation
+```{r}
+resids <- residuals(bp1)[, "Estimate"]
+
+index_data <- index_data |>
+  mutate(row_id = row_number())
+
+model_vars <- all.vars(formula(bp1)$formula) 
+
+index_data_used <- index_data |>
+  filter(if_all(all_of(model_vars), ~ !is.na(.)))
+
+nrow(index_data_used) == nrow(bp1$data)  # should now match
+
+bp1$data <- bp1$data |>
+  bind_cols(index_data_used$trial) |>
+  rename(trial = `...5`)
+
+some_trial <- unique(bp1$data$trial)[67]
+
+acf(resids[bp1$data$trial == some_trial], lag.max = 50)
+```
+
+
+#Model 2
+```{r}
+data <- index_data %>%
+  mutate(int_cond = factor(int_cond) %>%
+           relevel(ref = "Novel.true"))  # set whichever level you want as baseline
+
+fit_releveled <- update(bp1, newdata = data)  # or refit from scratch
+
+plan(multicore)
+bp1 <- brm(formula = formula,
+        data = index_data, family = gaussian(),
+        prior = priors,
+        iter = 2000, warmup = 1000, cores = 8, chains = 4,
+        save_pars = save_pars(all=TRUE),
+        control = list(adapt_delta = 0.99),
+        seed = 123,
+        file = "models/model_interaction")
+summary(bp1)
+```
+
+
+```{r}
+vars <- as_tibble(get_variables(bp1)) %>%
+  rename(term=value) %>% 
+  filter(! term %in% c("lprior", "accept_stat__", "treedepth__", "lp__",
+                       "divergent__", "n_leapfrog__", "energy__",
+                       "stepsize__"),
+         str_detect(term, "zs", negate = TRUE)) %>% 
+  print(n=Inf)
+```
+
+
+#Conditional effects
+
+```{r}
+## ---------------------------------------------------------------
+## Plot conditional effects for the pupil diameter GAMM
+## Model: Pupil_Diameter_bc.mm ~ 1 + int_cond + s(time, by = int_cond) +
+##                                s(time, pid, bs = "fs")
+## ---------------------------------------------------------------
+
+library(brms)
+library(tidyverse)
+
+# ------------------------------------------------------------------
+# 1. Load your fitted model (adjust path/object name as needed)
+# ------------------------------------------------------------------
+# fit <- readRDS("path/to/your_model.rds")
+
+# ------------------------------------------------------------------
+# 2. Get conditional effects for the time x condition smooth
+#    We explicitly ask for the interaction so each condition
+#    gets its own fitted smooth trajectory over time.
+# ------------------------------------------------------------------
+ce <- conditional_effects(
+  fit,
+  effects = "time:int_cond",
+  re_formula = NA,        # population-level only, ignore participant smooth
+  method = "fitted"       # posterior mean + credible interval
+)
+
+# Pull out the underlying data frame for custom plotting
+ce_df <- as.data.frame(ce[["time:int_cond"]])
+
+# ------------------------------------------------------------------
+# 3. Plot: fitted trajectories per condition with credible ribbons
+# ------------------------------------------------------------------
+p_smooths <- ggplot(ce_df, aes(x = time, y = estimate__,
+                                colour = int_cond, fill = int_cond)) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__),
+              alpha = 0.15, colour = NA) +
+  geom_line(linewidth = 1) +
+  labs(
+    x = "Time (s)",
+    y = "Baseline-corrected pupil diameter (mm)",
+    colour = "Condition",
+    fill = "Condition",
+    title = "Fitted pupil diameter trajectories by condition"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+
+print(p_smooths)
+
+ggsave("figures/conditional_effects_time_by_condition.png", p_smooths,
+       width = 8, height = 5.5, dpi = 300)
+
+# ------------------------------------------------------------------
+# 4. Optional: split into separate panels (facet) if lines overlap
+# ------------------------------------------------------------------
+p_facet <- p_smooths + facet_wrap(~ int_cond) + theme(legend.position = "none")
+print(p_facet)
+
+ggsave("conditional_effects_time_by_condition_facet.png", p_facet,
+       width = 9, height = 6, dpi = 300)
+
+# ------------------------------------------------------------------
+# 5. Optional: pairwise difference smooths (e.g. Learned.true vs Novel.true)
+#    Useful if you want to see WHEN conditions diverge, not just IF.
+#    This uses posterior draws directly rather than conditional_effects().
+# ------------------------------------------------------------------
+plot_diff_smooth <- function(fit, cond_a, cond_b, time_range = NULL) {
+
+  newdata_grid <- fit$data %>%
+    distinct(time) %>%
+    arrange(time)
+
+  if (!is.null(time_range)) {
+    newdata_grid <- newdata_grid %>%
+      filter(time >= time_range[1], time <= time_range[2])
+  }
+
+  # brms still validates that formula variables exist in newdata even when
+  # re_formula = NA excludes them from the calculation, so we need a
+  # placeholder pid column. Any single existing level works — its value
+  # doesn't affect the output since the by-participant smooth is excluded.
+  dummy_pid <- fit$data$pid[1]
+
+  nd_a <- newdata_grid %>% mutate(int_cond = cond_a, pid = dummy_pid)
+  nd_b <- newdata_grid %>% mutate(int_cond = cond_b, pid = dummy_pid)
+
+  draws_a <- fitted(fit, newdata = nd_a, re_formula = NA, summary = FALSE)
+  draws_b <- fitted(fit, newdata = nd_b, re_formula = NA, summary = FALSE)
+
+  diff_draws <- draws_a - draws_b
+
+  diff_summary <- tibble(
+    time      = newdata_grid$time,
+    estimate  = apply(diff_draws, 2, mean),
+    lower     = apply(diff_draws, 2, quantile, probs = 0.025),
+    upper     = apply(diff_draws, 2, quantile, probs = 0.975)
+  )
+
+  ggplot(diff_summary, aes(x = time, y = estimate)) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2, fill = "steelblue") +
+    geom_line(colour = "steelblue", linewidth = 1) +
+    labs(
+      x = "Time (s)",
+      y = paste0("Difference (", cond_a, " − ", cond_b, ")"),
+      title = paste0("Estimated difference smooth: ", cond_a, " vs ", cond_b)
+    ) +
+    theme_minimal(base_size = 13)
+}
+
+# Example usage — adjust condition labels to match your factor levels exactly
+p_diff_learned <- plot_diff_smooth(bp1, cond_a = "Learned.true", cond_b = "Learned.false")
+p_diff_novel <- plot_diff_smooth(bp1, cond_a = "Novel.true", cond_b = "Novel.false")
+p_diff_acc_true <-plot_diff_smooth(bp1, cond_a = "Learned.true", cond_b = "Novel.true")
+p_diff_acc_false <- plot_diff_smooth(bp1, cond_a = "Learned.false", cond_b = "Novel.false")
+
+print(p_diff_novel)
+
+ggsave("figures/diff_smooth_Noveltrue_vs_Novelfalse.png", p_diff_novel,
+       width = 7, height = 5, dpi = 300)
+ggsave("figures/diff_smooth_Learnedtrue_vs_Learnedfalse.png", p_diff_learned,
+       width = 7, height = 5, dpi = 300)
+ggsave("figures/diff_smooth_Learnedtrue_vs_Noveltrue.png", p_diff_acc_true,
+       width = 7, height = 5, dpi = 300)
+ggsave("figures/diff_smooth_Learnedfalse_vs_Novelfalse.png", p_diff_acc_false,
+       width = 7, height = 5, dpi = 300)
+## ---------------------------------------------------------------
+## Notes:
+## - Check exact factor level names in your data: levels(fit$data$int_cond)
+## - re_formula = NA excludes the by-participant smooth s(time, pid), so
+##   these are population-level (average) trajectories.
+## - If conditional_effects() is slow with 4000 draws, you can subsample:
+##   ndraws = 1000 inside conditional_effects()/fitted() calls.
+## ---------------------------------------------------------------
+```
+
+
+#Effect size
+```{r}
+# ---------------------------------------------------------------
+## 6. Standardized effect sizes (coefficient / sigma), full posterior
+##    Rather than dividing point estimates, we divide draw-by-draw so
+##    the resulting standardized effect has its own proper CI.
+## ---------------------------------------------------------------
+library(ggdist)  # for stat_halfeye
+ 
+draws <- as_draws_df(bp1)
+ 
+# Identify the population-level (b_) coefficient columns for int_cond,
+# excluding the intercept and any smooth-related columns.
+cond_cols <- draws %>%
+  select(starts_with("b_int_cond")) %>%
+  colnames()
+ 
+# Draw-level standardized effects: each condition coefficient divided by
+# that same draw's residual SD (sigma), giving a full posterior of the
+# standardized effect rather than a single point-estimate ratio.
+std_effects <- draws %>%
+  select(all_of(cond_cols), sigma) %>%
+  mutate(across(all_of(cond_cols), ~ .x / sigma, .names = "std_{.col}")) %>%
+  select(starts_with("std_")) %>%
+  pivot_longer(everything(), names_to = "term", values_to = "std_effect") %>%
+  mutate(term = str_remove(term, "^std_b_int_cond"))
+ 
+# Numeric summary: mean, 95% CI of the standardized effect per condition
+std_summary <- std_effects %>%
+  group_by(term) %>%
+  summarise(
+    estimate = mean(std_effect),
+    lower    = quantile(std_effect, 0.025),
+    upper    = quantile(std_effect, 0.975),
+    .groups = "drop"
+  )
+ 
+print(std_summary)
+ 
+# Visual: posterior distributions of standardized effects, with
+# conventional small/medium/large reference lines (0.2 / 0.5 / 0.8)
+# shown only as a rough anchor, not a verdict.
+p_std <- ggplot(std_effects, aes(x = std_effect, y = term)) +
+  geom_vline(xintercept = c(-0.2, 0.2), linetype = "dotted", colour = "grey60") +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40") +
+  stat_halfeye(fill = "steelblue", alpha = 0.7) +
+  labs(
+    x = "Standardized effect (coefficient / sigma)",
+    y = NULL,
+    title = "Posterior distributions of standardized condition effects",
+    subtitle = "Dotted lines mark a conventional 'small effect' (|d| = 0.2) reference"
+  ) +
+  theme_minimal(base_size = 13)
+ 
+print(p_std)
+ 
+ggsave("figures/standardized_effects_posterior.png", p_std,
+       width = 7.5, height = 5, dpi = 300)
+ 
+## ---------------------------------------------------------------
+## 7. Optional: variance explained by int_cond (more rigorous than
+##    a Cohen's-d-style ratio, since it accounts for the smooth terms
+##    too). Requires refitting a reduced model without int_cond, or
+##    performance::r2_bayes() if you already have both models saved.
+## ---------------------------------------------------------------
+# library(performance)
+# r2_full    <- r2_bayes(fit)
+# r2_reduced <- r2_bayes(fit_no_int_cond)   # fit this without int_cond
+# variance_explained_by_int_cond <- r2_full$R2_Bayes - r2_reduced$R2_Bayes
+ 
+## ---------------------------------------------------------------
+## Notes:
+## - Check exact factor level names in your data: levels(fit$data$int_cond)
+## - re_formula = NA excludes the by-participant smooth s(time, pid), so
+##   these are population-level (average) trajectories.
+## - If conditional_effects() is slow with 4000 draws, you can subsample:
+##   ndraws = 1000 inside conditional_effects()/fitted() calls.
+## ---------------------------------------------------------------
+```
+
+
+now, let's use add_epred_draws()
+
+by pid
+
+```{r}
+epred_pid <- index_data %>%
+  group_by(pid, int_cond) %>% 
+  data_grid(time = seq(0, 2400, 10)) %>%
+  add_epred_draws(bp1) ## default here is re_forumla = NULL, which inlcudes all varying effects of pid
+head(epred_pid)
+```
+
+
+summarise epreds at the group level
+
+```{r}
+epred_group <- epred_pid %>%
+  group_by(int_cond, time, .draw) %>%
+  summarise(.epred_group = mean(.epred, na.rm =TRUE),
+            sd_group = sd(.epred, na.rm = TRUE))
+head(epred_group)
+```
+
+quick epred plot
+
+```{r}
+p2.4 <-
+  ggplot(data = epred_group, aes(x = time, y = .epred_group,
+                                colour=int_cond, fill = int_cond)) +
+  stat_lineribbon(alpha = 0.5, .width = .95) +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_colour_brewer(palette = "Dark2") +
+  scale_x_continuous(limits=c(0,2400),
+                     breaks=seq(0,2400,400),
+                     labels=seq(0,2.4,0.4)) +
+  scale_y_continuous(limits=c(-0.25, 0.5),
+                     breaks = seq(-0.25, 0.5, 0.25)) +
+  labs(title = "posterior epreds")
+p2.4
+
+ggsave("figures/gamm_model/epred.jpeg")
+```
+## calculate quantile intervals and make a table ##
+
+quantile intervals at the group level (just pick 1s timebins to make it simpler)
+
+```{r}
+pred_group_q <- pred_group %>%
+  group_by(.draw) %>%
+  slice(seq(1, n()),10) %>%
+  mutate(time=factor(time)) %>%
+  group_by(int_cond, time) %>% 
+  median_qi(.prediction_group)
+head(pred_group_q)
+```
+
+make a table
+
+```{r}
+## make a table using flextable (still needs a title but that can be fixed later, depending on the doc it is being used in)
+pred_tab <- pred_group_q %>%
+  filter(time %in% seq(0, 2400, by = 100)) %>%
+  select(-.width, -.point, -.interval) %>%
+  mutate(across(where(is.double), \(x) round(x, 2))) %>% 
+  flextable()
+pred_tab
+
+## save it
+save_as_image(pred_tab, path = "figures/pred_table.png")
+
+## this table still needs polishing, but you get the basic idea
+
+## and some tabular data maybe
+write_csv(pred_group_q, "data/pred_group_q.csv")
+```
+
+# section 4 - posterior predictions by difference score #
+
+## calculate difference scores based on condition (reward > neutral) ##
+
+wrangle epred for contrasts
+
+```{r}
+epred_group_2 <- epred_group |>
+  separate(int_cond, into = c("Condition", "Accuracy"), sep = "\\.", remove = FALSE) |>
+  mutate(Condition = factor(Condition, levels = c("Learned", "Novel")),
+       Accuracy = factor(Accuracy, levels = c("false", "true")))
+
+summ_traces <- epred_group_2 %>%
+  group_by(Accuracy, Condition, time) %>%
+  summarise(est   = median(.epred_group),
+            lower = quantile(.epred_group, .025),
+            upper = quantile(.epred_group, .975),
+            .groups = "drop")
+
+# 2. Difference Learned - Novel, computed WITHIN each draw, then summarised ---
+summ_diff <- epred_group_2 %>%
+  ungroup()|>
+  select(Accuracy, Condition, time, .draw, .epred_group) %>%
+  pivot_wider(names_from = Condition, values_from = .epred_group) %>%
+  mutate(diff = Learned - Novel) %>%
+  group_by(Accuracy, time) %>%
+  summarise(est   = median(diff),
+            lower = quantile(diff, .025),
+            upper = quantile(diff, .975),
+            .groups = "drop")
+
+# Shared y-limits so correct and incorrect rows are directly comparable
+trace_lims <- range(c(summ_traces$lower, summ_traces$upper))
+diff_lims  <- range(c(summ_diff$lower,  summ_diff$upper, 0))
+
+# 3. One row = trace panel + difference panel ---------------------------------
+make_row <- function(acc, label) {
+
+  p_trace <- summ_traces %>%
+    filter(Accuracy == acc) %>%
+    ggplot(aes(time, est, colour = Condition, fill = Condition)) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = .2, colour = NA) +
+    geom_line(linewidth = 1) +
+    scale_colour_manual(values = myColors_4) +
+    scale_fill_manual(values = myColors_4) +
+    coord_cartesian(ylim = trace_lims) +
+    labs(title = paste0(label, ": pupil trace"),
+         x = "Time", y = "Predicted pupil size") +
+    theme_classic()
+
+  p_diff <- summ_diff %>%
+    filter(Accuracy == acc) %>%
+    ggplot(aes(time, est)) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey50") +
+    geom_ribbon(aes(ymin = lower, ymax = upper), fill = "grey40", alpha = .25) +
+    geom_line(linewidth = 1) +
+    coord_cartesian(ylim = diff_lims) +
+    labs(title = paste0(label, ": Learned \u2212 Novel"),
+         x = "Time", y = "Difference in pupil size") +
+    theme_classic()
+
+  p_trace + p_diff
+}
+
+p_correct   <- make_row("true",  "Correct trials")
+p_incorrect <- make_row("false", "Incorrect trials")
+
+# 4. Stack: correct on top, incorrect below -----------------------------------
+p_all <- (p_correct / p_incorrect) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+p_all
+
+# ggsave("pupil_predictions.png", p_all, width = 10, height = 8, dpi = 300)
+```
+
+plot
+
+```{r}
+p4.4 <- ggplot(data = epred_diff_condition, aes(x = time, y = .epred_group_acc, color = Accuracy, fill = Accuracy)) +
+  stat_lineribbon(.width = .95, alpha = 0.5) +
+  geom_hline(yintercept = 0, linetype = "solid", colour = "darkred") +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_colour_brewer(palette = "Dark2") +
+  scale_x_continuous(limits=c(0,2400),
+                     breaks=seq(0,2400,400),
+                     labels=seq(0,2.4,0.4)) +
+  scale_y_continuous(limits=c(-0.25, 0.25),
+                     breaks = seq(-0.25, 0.25, 0.25)) +
+  labs(title = "Pupil trace predictions for Correct and Incorrect trials")
+p4.4
+
+ggsave ("figures/epred_diff_acc_group.jpeg",
+         width = 10, height = 8, dpi = 800)
+```
+
+diff: Novel-Learned
+```{r}
+p4.5 <- ggplot(epred_diff_condition, aes(x = time, y = diff)) +  
+  stat_lineribbon(.width = .95, alpha = 0.5) +
+  geom_hline(yintercept = 0, linetype = "solid", colour = "darkred") +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_colour_brewer(palette = "Dark2") +
+  scale_x_continuous(limits=c(0,2400),
+                     breaks=seq(0,2400,400),
+                     labels=seq(0,2.4,0.4)) +
+  scale_y_continuous(limits=c(-0.50, 0.25),
+                     breaks = seq(-0.50, 0.25, 0.25)) +
+  theme(legend.position = "none") +
+  labs(title = "preds (Novel > Learned)")
+p4.5
+
+ggsave ("figures/epred_diff_cond_group.jpeg",
+         width = 10, height = 8, dpi = 800)
+```
+
+plot together
+
+pred
+```{r}
+p4.3 <- (p4.1 | p4.2) +
+  plot_layout(axes = "collect")
+p4.3
+
+ggsave ("figures/pred_diff.jpeg",
+        width = 10, height = 8, dpi = 800)
+```
+epred
+```{r}
+p4.6 <- (p4.4 | p4.5) +
+  plot_layout(axes = "collect")
+p4.6
+
+ggsave ("figures/epred_diff.jpeg",
+        width = 10, height = 8, dpi = 800)
+```
+

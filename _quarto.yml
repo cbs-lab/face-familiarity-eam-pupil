@@ -1,0 +1,5 @@
+project:
+  title: "Quarto preprint"
+execute:
+  cache: false
+  freeze: auto
