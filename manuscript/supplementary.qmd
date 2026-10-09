@@ -33,7 +33,7 @@ affiliations:
     department: Learning and Instruction Laboratory, Department of Humanities, Social and Political Sciences
 keywords: [face perception, memory, familiarity, person knowledge, decision models, evidence accumulation modelling]
 functions: [place]
-bibliography: supp-bibliography.bib
+bibliography: bibliography.bib
 csl: apa.csl
 format:
   preprint-typst:
@@ -45,6 +45,12 @@ editor_options:
 knitr:
   opts_chunk:
     dev: "ragg_png"
+    dpi: 300
+    fig.width: 6.5
+    fig.height: 3
+    fig.align: "center"
+    warning: false
+    message: false
 editor: 
   markdown: 
     wrap: sentence
@@ -83,14 +89,33 @@ vapply(
 
 knitr::opts_chunk$set(echo = FALSE)
 
-theme_set(
-  theme_bw() +
+## Manuscript-wide plot theme (identical to the main manuscript) ##
+theme_manuscript <- function(base_size = 10) {
+  theme_classic(base_size = base_size) +
     theme(
-      text = element_text(size = 15, face = "bold"),
-      title = element_text(size = 15, face = "bold"),
-      legend.position = "none"
+      axis.title       = element_text(face = "bold"),
+      axis.text        = element_text(colour = "black"),
+      strip.background = element_blank(),
+      strip.text       = element_text(face = "bold", size = rel(1)),
+      strip.placement  = "outside",
+      legend.position  = "bottom",
+      legend.title     = element_text(face = "bold"),
+      plot.title       = element_text(face = "bold", size = rel(1)),
+      plot.margin      = margin(5, 10, 5, 5)
     )
-)
+}
+theme_set(theme_manuscript())
+
+# Text annotations inside plots (r values etc.), ~9 pt
+annot_size <- 3
+
+## Manuscript-wide table style ##
+tt_manuscript <- function(df, notes = NULL) {
+  tt(df, notes = notes) |>
+    style_tt(i = 0, bold = TRUE, fontsize = 0.8) |>
+    style_tt(i = seq_len(nrow(df)), fontsize = 0.7)
+}
+
 ## plot settings ##
 ## Plot colors
 safe_pal <- paletteer_d("rcartocolor::Safe", 4)
@@ -131,6 +156,8 @@ pd2 <- position_dodge(1)
 These are the priors used for the preregistered LBA model.
 
 ```{r}
+#| label: tbl-priors-supp
+#| tbl-cap: "Priors of the preregistered linear ballistic accumulator model."
 prior_lba_table <- tibble(
   parameter = c(
     "v_SNovel:lMFALSE", "v_SLearned:lMFALSE",
@@ -177,9 +204,17 @@ prior_lba_table <- tibble(
 )
 
 ## create the table
-prior_lba_table |> 
-  tt() |> 
-  style_tt(fontsize = 0.85)
+prior_lba_table |>
+  rename(
+    Parameter   = parameter,
+    Description = description,
+    Condition   = condition,
+    Correct     = correct,
+    Response    = response,
+    Mean        = mean,
+    SD          = sd
+  ) |>
+  tt_manuscript()
 ```
 
 ## Model checks
@@ -228,8 +263,7 @@ knitr::include_graphics(here("manuscript", "figures", "pars.png"))
 
 ## Point estimate correlations 
 
-Linear relationships between the median of the posterior distribution of drift rate (TRUE) and rift rate (FALSE) and the three pupil metrics (mean pupil size, peak pupil size and rte of pupil change) can bee seen @fig-corr-point-estimates-supp.
-
+Linear relationships between the median of the posterior distribution of drift rate (TRUE) and drift rate (FALSE) and the three pupil metrics (mean pupil size, peak pupil size and rate of pupil change) can be seen in @fig-corr-point-estimates-supp.
 
 ```{r}
 #| label: load-pupil-data-supp
@@ -537,10 +571,10 @@ drift_plots <- levels(drift_df$Accuracy) %>%
 
 ```{r}
 #| label: fig-corr-point-estimates-supp
-#| fig-cap: "Point estimates correlations between drift rate (TRUE) and (FALSE) and pupil metrics"
+#| fig-cap: "Point estimates correlations between drift rate (TRUE) and drift rate (FALSE) and pupil metrics"
 #| fig-subcap:
-#| - "Point estimates correlations between drift rate (TRUE) for Learned and Novel faces and pupil metrics (Mean pupil size, Maximum Pupil size and rate of pupil change)"
-#| - "Point estimates correlations between drift rate (FALSE) for Learned and Novel faces and pupil metrics (Mean pupil size, Maximum Pupil size and rate of pupil change)"
+#| - "Point estimates correlations between drift rate (TRUE) for Learned and Novel faces and pupil metrics (mean pupil size, peak pupil size and rate of pupil change)"
+#| - "Point estimates correlations between drift rate (FALSE) for Learned and Novel faces and pupil metrics (mean pupil size, peak pupil size and rate of pupil change)"
 #| layout-ncol: 1
 #| fig-height: 3.5
 drift_plots$True
@@ -549,856 +583,260 @@ drift_plots$False
 
 {{< pagebreak >}}
 
-## Plausible value correlations with Cambridge Car Memory scores and Cambridge Face Memory scores
+## Plausible value correlations
 
-We calculated the posterior correlations distributions between car recognition ability and our parameters of interest. Correlations with threshold can be found in @fig-plausible-corr-thresh-supp and correlations with drift rate in @fig-plausible-corr-drift-supp. @tbl-plausible-cor-supp summarize these distributions. The posterior correlations with face recognition ability were added to facilitate comparisons between the two memory scores. 
+We calculated the plausible value correlations between each posterior draw of drift rate (TRUE) and drift rate (FALSE) and the three pupil metrics (mean pupil size, peak pupil size and rate of pupil change). These distributions can be seen in @fig-plausible-corr-drift-supp and a summary of these distributions can be seen in @tbl-plausible-cor-supp.
 
 ```{r}
 #| label: plausible-value-wrangle-supp
 #| include: false
-param_cols <- c(
-  "v_Snovel_lMTRUE",
-  "v_Snovel_lMFALSE",
-  "v_Slearned_lMTRUE",
-  "v_Slearned_lMFALSE",
-  "sv_lMTRUE",
-  "B_lRnovel",
-  "B_lRlearned",
-  "A",
-  "t0"
-)
+# ---- 6. Posterior samples of parameters ----
+params_samples <- param_pid %>%
+  rename(
+    drift_learned_false = `v_SLearned:lMFALSE`,
+    drift_learned_true  = `v_SLearned:lMTRUE`,
+    drift_novel_false   = `v_SNovel:lMFALSE`,
+    drift_novel_true    = `v_SNovel:lMTRUE`,
+    pid = "subjects"
+  ) %>%
+  group_by(pid) %>%
+  mutate(.draw = row_number()) %>%
+  ungroup()
 
-all_prereg_params <- c(
-  param_cols,
-  "discrim_novel",
-  "discrim_learned"
-)
+# Pupil values repeat across all draws per pid
+params_merged_drift  <- params_samples %>% left_join(pupil_wide_drift,  by = "pid")
+# ---- 7. r for every draw, for every pairing ----
+cor_by_draw <- function(pairings, data) {
+  data_split <- split(data, data$.draw)   # split once, reuse for every pairing
+  draws <- as.numeric(names(data_split))
 
-param_labels <- c(
-  B_lRnovel = "Threshold: Novel",
-  B_lRlearned = "Threshold: Learned",
-  v_Snovel_lMTRUE = "Drift: Novel (TRUE)",
-  v_Snovel_lMFALSE = "Drift: Novel (FALSE)",
-  discrim_novel = "Drift: Novel (TRUE-FALSE)",
-  v_Slearned_lMTRUE = "Drift: Learned (TRUE)",
-  v_Slearned_lMFALSE = "Drift: Learned (FALSE)",
-  discrim_learned = "Drift: Learned (TRUE-FALSE)"
-)
-
-# join theta_pid (full posterior) with cambridge scores
-# theta_pid has 300 pids x 9 params x 15000 draws
-pv_data <- theta_pid |>
-  pivot_wider(names_from = param, values_from = value) |>
-  mutate(
-    discrim_novel = v_Snovel_lMTRUE - v_Snovel_lMFALSE,
-    discrim_learned = v_Slearned_lMTRUE - v_Slearned_lMFALSE
-  ) |>
-  left_join(
-    cam_face |> select(pid, face_recog_centred),
-    by = "pid"
-  ) |>
-  left_join(
-    cam_car |> select(pid, car_recog_centred),
-    by = "pid"
-  ) |>
-  pivot_longer(
-    cols = all_of(all_prereg_params),
-    names_to = "param",
-    values_to = "estimate"
-  )
-
-# compute correlation for each draw x param x predictor
-# this will take a moment with 15000 draws
-pv_cors <- pv_data |>
-  group_by(.draw, param) |>
-  summarise(
-    r_face = cor(estimate, face_recog_centred, use = "complete.obs"),
-    r_car = cor(estimate, car_recog_centred, use = "complete.obs"),
-    .groups = "drop"
-  ) |>
-  pivot_longer(
-    cols = c(r_face, r_car),
-    names_to = "predictor",
-    values_to = "r"
-  ) |>
-  mutate(predictor = if_else(str_detect(predictor, "_face"), "Face", "Car"))
-pv_summary <- pv_cors |>
-  group_by(param, predictor) |>
-  median_qi(r, .width = c(0.95)) |>
-  mutate(label = param_labels[param]) |>
-  print(n = Inf)
-```
-
-```{r}
-#| label: create-plausible-value-corr-plots-thresh
-#| include: false
-# left panel — novel and learned
-pv_thresh_main <- pv_cors |>
-  filter(param %in% c("B_lRnovel", "B_lRlearned")) |>
-  mutate(
-    response = if_else(param == "B_lRnovel", "Novel", "Learned"),
-    response = factor(response, levels = c("Learned", "Novel"))
-  )
-
-p_thresh_left <- ggplot(
-  pv_thresh_main,
-  aes(x = r, y = predictor, fill = response, colour = response)
-) +
-  stat_halfeye(alpha = 0.7, .width = c(0.5, 0.95)) +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "darkgrey") +
-  scale_fill_manual(values = myColors_4) +
-  scale_colour_manual(values = myColors_4) +
-  labs(
-    x = "Plausible r value",
-    y = NULL,
-    fill = NULL,
-    colour = NULL
-  ) +
-  theme(
-    legend.position = "bottom",
-    text = element_text(size = 5, face = "bold"),
-    strip.text = element_text(size = 5, face = "bold"),
-    axis.text = element_text(size = 12, face = "bold"),
-    axis.title = element_text(size = 14, face = "bold"),
-    legend.text = element_text(size = 12, face = "bold")
-  )
-```
-
-```{r}
-#| label: create-plausible-value-corr-plots-drift-supp
-#| include: false
-# first panel - drift rate true and false
-pv_drift_true_false <- pv_cors |>
-  filter(
-    param %in%
-      c(
-        "v_Slearned_lMTRUE",
-        "v_Slearned_lMFALSE",
-        "v_Snovel_lMTRUE",
-        "v_Snovel_lMFALSE"
+  pairings %>%
+    mutate(res = map2(param_col, pupil_col, function(p, q) {
+      tibble(
+        sample = draws,
+        r = vapply(data_split, function(d)
+          cor(d[[p]], d[[q]], use = "pairwise.complete.obs"), numeric(1))
       )
-  ) |>
+    })) %>%
+    unnest(res) %>%
+    select(parameter = param_col, metric, pupil_column = pupil_col, sample, r)
+}
+
+cor_samples_drift  <- cor_by_draw(pairings_full_drift,  params_merged_drift)
+
+
+add_metric_label <- function(df) {
+  df %>%
+    select(-pupil_column) %>%
+    mutate(
+      Metric = factor(metric,
+                      levels = c("mean", "max", "rate"),
+                      labels = c("Pupil mean (mm)", "Pupil max (mm)",
+                                 "Rate of pupil change (mm/s)"))
+    )
+}
+
+# ---- Drift rate (pupil metrics coded by STIMULUS) ----
+drift_post <- add_metric_label(cor_samples_drift) %>%
   mutate(
-    condition = if_else(
-      param == "v_Slearned_lMTRUE",
-      "Learned",
-      if_else(param == "v_Slearned_lMFALSE", "Learned", "Novel")
+    Stimulus = factor(if_else(str_detect(parameter, "learned"), "Learned", "Novel"),
+                      levels = c("Learned", "Novel")),
+    Accuracy = case_when(
+      str_ends(parameter, "_true")  ~ "True",
+      str_ends(parameter, "_false") ~ "False"
     ),
-    accuracy = if_else(
-      param == "v_Slearned_lMTRUE",
-      "TRUE",
-      if_else(param == "v_Snovel_lMTRUE", "TRUE", "FALSE")
-    ),
-    accuracy = factor(accuracy, levels = c("TRUE", "FALSE"))
-  )
-
-p_drift_first <- ggplot(
-  pv_drift_true_false,
-  aes(x = r, y = predictor, fill = accuracy, colour = accuracy)
-) +
-  stat_halfeye(alpha = 0.7, .width = c(0.5, 0.95)) +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "darkgrey") +
-  scale_fill_manual(values = myColors_acc_2) +
-  scale_colour_manual(values = myColors_acc_2) +
-  labs(
-    x = "Plausible r value",
-    y = NULL,
-    fill = NULL,
-    colour = NULL
-  ) +
-  facet_wrap(~ condition) +
-  theme(
-    legend.position = "bottom",
-    text = element_text(size = 7, face = "bold"),
-    strip.text = element_text(size = 10, face = "bold"),
-    axis.text = element_text(size = 12, face = "bold"),
-    axis.title = element_text(size = 14, face = "bold"),
-    legend.text = element_text(size = 12, face = "bold")
-  )
-
-# middle panel — discrimination (true - false) per condition
-pv_drift_discrim <- pv_cors |>
-  filter(param %in% c("discrim_novel", "discrim_learned")) |>
-  mutate(
-    condition = if_else(param == "discrim_novel", "Novel", "Learned"),
-    condition = factor(condition, levels = c("Learned", "Novel"))
-  )
-
-p_drift_mid <- ggplot(
-  pv_drift_discrim,
-  aes(x = r, y = predictor, fill = condition, colour = condition)
-) +
-  stat_halfeye(alpha = 0.7, .width = c(0.5, 0.95)) +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "darkgrey") +
-  scale_fill_manual(values = myColors_4) +
-  scale_colour_manual(values = myColors_4) +
-  labs(
-    x = "Plausible r value",
-    y = NULL,
-    fill = NULL,
-    colour = NULL
-  ) +
-  theme(
-    legend.position = "bottom",
-    text = element_text(size = 7, face = "bold"),
-    strip.text = element_text(size = 7, face = "bold"),
-    axis.text = element_text(size = 12, face = "bold"),
-    axis.title = element_text(size = 14, face = "bold"),
-    legend.text = element_text(size = 12, face = "bold")
+    Accuracy = factor(Accuracy, levels = c("True", "False"))
   )
 ```
 
 ```{r}
-#| label: fig-plausible-corr-thresh-supp
-#| fig-cap: "Plausible correlation values distributions between threshold by response and recognition abilities. Points denote the median of the distribution and error bars represent 95% quantile intervals."
-#| warning: false
-#| fig-width: 10
-#| fig-height: 5
-p_thresh_left
+#| label: plot-plausible-values-supp
+#| include: false
+make_posterior_plot <- function(df, group_var, title = NULL) {
+
+  stopifnot("No data for this plot - check the pairings/columns" = nrow(df) > 0)
+
+  ggplot(df, aes(x = r, y = .data[[group_var]],
+                 fill = .data[[group_var]], colour = .data[[group_var]])) +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
+    stat_halfeye(point_interval = median_qi, .width = c(0.66, 0.95),
+                 slab_alpha = 0.6, point_size = 1.5) +
+    facet_wrap(~ Metric, nrow = 1,
+               labeller = label_wrap_gen(width = 20)) +
+    coord_cartesian(xlim = c(-1, 1)) +
+    scale_x_continuous(breaks = seq(-1, 1, 0.5),
+                       labels = c("-1", "", "0", "", "1")) +
+    scale_colour_manual(values = myColors_4) +
+    scale_fill_manual(values = myColors_4) +
+    labs(title = title, x = "Posterior correlation (r)", y = NULL) +
+    theme(legend.position = "none")
+}
+
+# ---- Drift rate: one plot per accuracy level ----
+drift_post_plots <- levels(drift_post$Accuracy) %>%
+  set_names() %>%
+  map(~ make_posterior_plot(
+    drift_post %>% filter(Accuracy == .x),
+    group_var = "Stimulus"
+  ))
 ```
 
 ```{r}
 #| label: fig-plausible-corr-drift-supp
-#| fig-cap: "Plausible correlation values distributions between drift rate parameters by stimulus and recognition abilities. Points denote the median of the distribution and error bars represent 95% quantile intervals."
+#| fig-cap: "Plausible value correlations between drift rate parameters and pupil metrics. Points denote the median of the distribution and error bars represent the 66% and 95% quantile intervals."
 #| fig-subcap: 
-#|  - "Plausible value correlations between drift rate (TRUE) and drift rate (FALSE) and recognition abilities for both stimulus conditions"
-#|  - "Plausible value correlations between drift rate (TRUE-FASLE) and recognition abilities for both stimulus conditions"
-#| layout-nrow: 2
-#| warning: false
-#| fig-width: 10
-#| fig-height: 4
-p_drift_first
-p_drift_mid
+#|  - "Plausible value correlations between drift rate (TRUE) for Learned and Novel faces and pupil metrics (mean pupil size, peak pupil size and rate of pupil change)"
+#|  - "Plausible value correlations between drift rate (FALSE) for Learned and Novel faces and pupil metrics (mean pupil size, peak pupil size and rate of pupil change)"
+#| layout-ncol: 1
+#| fig-height: 3
+drift_post_plots$True
+drift_post_plots$False
 ```
-
 
 ```{r}
 #| label: tbl-plausible-cor-supp
-#| tbl-cap: "Median r and 95% quantile intervals of the plausible value correlations between LBA parameters and recogntion ability scores."
+#| tbl-cap: "Median r and 95% quantile intervals of the plausible value correlations between drift rate (TRUE and FALSE) and pupil metrics."
 #| include: true
-#| tbl-height: 10
-#| tbl-width: 15
-table_data <- pv_summary |>
-  filter(!is.na(label)) |>
-  # no longer drop true/false rows
-  mutate(
-    r_fmt = sprintf("%.2f", r),
-    ci_fmt = sprintf("[%.2f, %.2f]", .lower, .upper),
-    color = case_when(
-      .lower > 0 & .upper > 0 ~ "blue",
-      .lower < 0 & .upper < 0 ~ "red",
-      TRUE ~ "black"
-    )
-  ) |>
-  select(label, predictor, r_fmt, ci_fmt, color) |>
-  pivot_wider(
-    names_from = predictor,
-    values_from = c(r_fmt, ci_fmt, color),
-    names_glue = "{predictor}_{.value}"
-  ) |>
-  separate(
-    label,
-    into = c("Parameter", "Condition"),
-    sep = ": ",
-    fill = "right"
-  ) |>
-  mutate(
-    # extract accuracy before cleaning condition
-    Accuracy = case_when(
-      grepl("\\(TRUE\\)$", Condition, ignore.case = TRUE) ~ "TRUE",
-      grepl("\\(FALSE\\)$", Condition, ignore.case = TRUE) ~ "FALSE",
-      grepl("TRUE-FALSE", Condition, ignore.case = TRUE) ~ "TRUE-FALSE",
-      TRUE ~ "-"
-    ),
-    # clean up condition labels
-    Condition = case_when(
-      Condition == "Learned (TRUE)" ~ "Learned",
-      Condition == "Learned (FALSE)" ~ "Learned",
-      Condition == "Novel (TRUE)" ~ "Novel",
-      Condition == "Novel (FALSE)" ~ "Novel",
-      Condition == "Learned (TRUE-FALSE)" ~ "Learned",
-      Condition == "Novel (TRUE-FALSE)" ~ "Novel",
-      TRUE ~ Condition
-    ),
-    # set ordering
-    Parameter = factor(Parameter, levels = c("Threshold", "Drift")),
-    Condition = factor(
-      Condition,
-      levels = c("Learned", "Novel")
-    ),
-    Accuracy = factor(Accuracy, levels = c("TRUE", "FALSE", "TRUE-FALSE", "-"))
-  ) |>
-  arrange(Parameter, Condition, Accuracy)
 
-
-# rename columns to clean display names first
-table_data_tt <- table_data |>
-  rename(
-    `median r_Face` = Face_r_fmt,
-    `95% QI_Face` = Face_ci_fmt,
-    `median r_Car` = Car_r_fmt,
-    `95% QI_Car` = Car_ci_fmt
-  ) |>
-  select(
-    Parameter,
-    Condition,
-    Accuracy,
-    `median r_Face`,
-    `95% QI_Face`,
-    `median r_Car`,
-    `95% QI_Car`,
-    Face_color,
-    Car_color
-  )
-table_data_tt <- as.data.frame(table_data_tt)
-
-tt_table <- tt(
-  table_data_tt |> select(-Face_color, -Car_color),
-  notes = "Note. Blue = 95% QI entirely above zero; red = 95% QI entirely below zero."
-) |>
-  group_tt(j = list("Face" = 4:5, "Car" = 6:7)) |>
-  style_tt(i = 0, bold = TRUE) |>
-  style_tt(i = 1:nrow(table_data_tt), fontsize = 0.7) |>
-  style_tt(i = 0, fontsize = 0.8) |>
-  style_tt(i = -1, bold = TRUE, fontsize = 0.8) |>
-  style_tt(
-    i = which(table_data_tt$Face_color == "blue"),
-    j = 4:5,
-    color = "blue"
-  ) |>
-  style_tt(
-    i = which(table_data_tt$Face_color == "red"),
-    j = 4:5,
-    color = "red"
-  ) |>
-  style_tt(
-    i = which(table_data_tt$Car_color == "blue"),
-    j = 6:7,
-    color = "blue"
-  ) |>
-  style_tt(
-    i = which(table_data_tt$Car_color == "red"),
-    j = 6:7,
-    color = "red"
-  )
-
-tt_table
-```
-
-
-## Bayesian linear regression models for threshold parameter
-
-We ran two Bayesian linear regression models to estimate if face recognition ability could predict the threshold parameter (response cautions) for both the Learned and Novel responses. The models description can be found in @tbl-regression-model-tresh-formula. 
-
-Following our preregistration, the predictions of the two regression models for threshold can be seen in @fig-prediction-thresh.
-From visual inspection, the response caution seems to increase when face recognition increases for both the Learned and Novel response.
-This pattern of prediction remains the same when accounting for car recognition ability for the "Learned" response but not for the "Novel" response.
-Inspection of the posterior predictions in @tbl-pred-acc-thresh shows that some of these predicted intervals overlap with 0, and that caution is needed when extrapolating these results.
-
-{{< pagebreak >}}
-
-```{r}
-#| label: regression-model-formula-thresh-face
-#| include: false
-# create a df
-regression_formula <- tribble(
-  ~Parameter          , ~Condition             , ~Ability     , ~Formula                                                                                     ,
-  "Median threshold" , "response" , "Face"       , "Median threshold:  0 + response + face_ability + (1|participant)"              ,
-  "Median drift rate" , "response" , "Face + Car" , "Median drift rate: 0 + response + face_ability + car_ability + (1|participant)" ,
-)
-```
-
-```{r}
-#| label: tbl-regression-model-tresh-formula
-#| tbl-cap: "Formula specification for the pre-registered linear regression models."
-#| include: true
-regression_formula |>
-  tt(
-    notes = "response = two-choices response (Learned vs. Novel)"
-  )
-```
-
-```{r}
-#| label: read-thresh-models
-#| include: false
-b1_thresh <- readRDS(here("models/iid/b1_thresh_face.rds"))
-b2_thresh <- readRDS(here("models/iid/b2_thresh_car.rds"))
-```
-
-```{r}
-#| label: ppreds-thresh-wrangle
-#| include: false
-# --- all newdata grids ---
-
-# b1: face only
-newdata_b1 <- expand_grid(
-  response = factor(
-    c("learned", "novel"),
-    levels = c("learned", "novel")
-  ),
-  face = seq(-15, 15, by = 1)
-)
-
-# b2: face + car at three car levels
-newdata_b2 <- expand_grid(
-  response = factor(
-    c("learned", "novel"),
-    levels = c("learned", "novel")
-  ),
-  face = seq(-15, 15, by = 1),
-  car = c(-15, 0, 15)
-)
-
-# --- get posterior preds ---
-preds_b1 <- newdata_b1 |>
-  add_epred_draws(b1_thresh, ndraws = 1000, re_formula = NA) |>
-  mutate(
-    response = if_else(
-      str_detect(as.character(response), "novel"),
-      "Novel",
-      "Learned"),
-    response = factor(response, levels = c("Learned", "Novel")),
-    model = "Face only"
-  )
-
-preds_b2 <- newdata_b2 |>
-  add_epred_draws(b2_thresh, ndraws = 1000, re_formula = NA) |>
-  mutate(
-    response = if_else(
-      str_detect(as.character(response), "novel"),
-      "Novel",
-      "Learned"
-    ),
-    response = factor(response, levels = c("Learned", "Novel")),
-    model = "Face + Car",
-    car_label = factor(
-      car,
-      levels = c(-15, 0, 15),
-      labels = c("Low car (-15)", "Average car (0)", "High car (+15)")
-    )
-  )
-
-# filter b2 at car = 0 only (for direct comparison with b1)
-preds_b2_car0 <- preds_b2 |> filter(car == 0)
-
-# shared y range across all predictions
-y_range_thresh <- range(c(preds_b1$.epred, preds_b2$.epred))
-
-##Face model
-diff_summary_face <- preds_b1 %>%
+cor_wide <- drift_post %>%
+  group_by(metric, parameter) %>%
+  median_qi(r, .width = 0.95) %>%
   ungroup() %>%
-  select(response, face, .draw, .epred) |>
-  group_by(response, face) %>%
-  median_qi(.epred, .width = 0.95)
-
-##Face and Car model
-# split condition back into learned/novel and true/false, then difference
-diff_summary_car <- preds_b2_car0 %>%
-  ungroup() %>%
-  select(response, face, .draw, .epred) |>
-  group_by(response, face) %>%
-  median_qi(.epred, .width = 0.95)
-```
-
-```{r}
-#| label: ppreds-thresh-plot-2x2
-#| include: false
-plot_preds_contrast <- function(diff_summary, title) {
-  ggplot(
-    diff_summary,
-    aes(
-      x = face,
-      y = .epred,
-      ymin = .lower,
-      ymax = .upper,
-      fill = response,
-      colour = response
-    )
-  ) +
-    geom_ribbon(alpha = 0.3, color = NA) +
-    geom_line(linewidth = 1) +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    facet_wrap(~response) +
-    labs(
-      title = title,
-      x = "Face recognition (centred)",
-      y = "Predicted threshold"
-    ) +
-    theme(legend.position = "none")
-}
-
-p_contrast_b1 <- plot_preds_contrast(diff_summary_face, "a) Face model")
-p_contrast_b2 <- plot_preds_contrast(diff_summary_car, "b) Face and Car model")
-
-p_contrast_b1_b2 <- (p_contrast_b1 | p_contrast_b2) +
-  plot_layout(axis_titles = "collect", guides = "collect")
-```
-
-```{r}
-get_slopes <- function(draws) {
-  draws |>
-    ungroup() |>
-    filter(face %in% c(-15, 15)) |>
-    group_by(.draw, response, across(any_of("car"))) |>
-    summarise(
-      slope = (.epred[face == 15] - .epred[face == -15]) / 30,
-      .groups = "drop"
-    )
-}
-
-slopes <- bind_rows(
-  "Face"       = get_slopes(preds_b1),
-  "Face + Car" = get_slopes(preds_b2_car0),
-  .id = "Model"
-)
-
-thr_tab <- slopes |>
-  group_by(Model, Response = response) |>
-  median_qi(slope, .width = 0.95) |>
-  ungroup() |>
-  transmute(
-    Parameter   = "Threshold slope",
-    Model,
-    Response,
-    Estimate    = slope,
-    `l-95% CI`  = .lower,
-    `u-95% CI`  = .upper
-  )
-```
-
-
-```{r}
-#| label: fig-prediction-thresh
-#| fig-cap: "Predicted threshold values from face recognition ability scores for a) Face model and b) Face and Car model "
-#| layout-nrow: 1
-#| warning: false
-#| fig-width: 10
-#| fig-height: 7
-p_contrast_b1_b2
-```
-
-```{r}
-#| label: tbl-pred-acc-thresh
-#| tbl-cap: "Estimates and 95% quantile intervals of the predicted threshold values slope from face recognition ability scores"
-#| include: true
-#| tbl-height: 10
-#| tbl-width: 15
-tt(thr_tab) |>
-  format_tt(j = 4:6, digits = 4, num_fmt = "decimal") |>
-  style_tt(i = 0, bold = TRUE) |>
-  style_tt(i = 1:nrow(thr_tab), fontsize = 0.7) |>
-  style_tt(i = 0, fontsize = 0.8)
-```
-
-{{< pagebreak >}}
-
-## Bayesian linear regression models: Car predictor
-
-As an exploratory analysis, we were interested to see how does object recognition ability predict the drift rate and threshold values estimated from our face recognition task. 
-We ran two Bayesian linear regression models: the first one to estimate if object recognition ability could predict the response caution for learned and novel response and the second one to estimate if object recognition ability could predict the different drift rates (TRUE, FALSE and TRUE-FALSE) for learned and novel face stimuli. The models specificity can be found in @tbl-regression-model-formula-car. 
-
-
-
-```{r}
-#| label: regression-model-formula-car
-#| include: false
-# create a df
-regression_formula <- tribble(
-  ~Parameter          , ~Condition             , ~Ability     , ~Formula                                                                                     ,
-  "Median threshold" , "response" , "Car"       , "Median threshold:  0 + response + car_ability + (1|participant)"              ,
-  "Median drift rate" , "familiarity:accuracy" , "Car" , "Median drift rate: 0 + familiarity:accuracy + car_ability + (1|participant)" ,
-)
-```
-
-```{r}
-#| label: tbl-regression-model-formula-car
-#| tbl-cap: "Formula specification for the pre-registered linear regression models."
-#| include: true
-regression_formula |>
-  tt(
-    notes = "response = two-choices response (Learned vs. Novel); familiarity = face stimulus familiarity (Learned vs. Novel); accuracy = response accuracy (TRUE vs. FALSE)"
-  )
-```
-
-```{r}
-#| label: read-models-car
-#| include: false
-b3_thresh <- readRDS(here("models/iid/b3_thresh_car_only.rds"))
-b3_drift <- readRDS(here("models/iid/b3_drift_car_only.rds"))
-```
-
-```{r}
-#| label: ppreds-thresh-car-wrangle
-#| include: false
-# --- all newdata grids ---
-
-# b3: car only
-newdata_b3 <- expand_grid(
-  response = factor(
-    c("learned", "novel"),
-    levels = c("learned", "novel")
-  ),
-  car = seq(-15, 15, by = 1)
-)
-
-# --- get posterior preds ---
-preds_b3 <- newdata_b3 |>
-  add_epred_draws(b3_thresh, ndraws = 1000, re_formula = NA) |>
   mutate(
-    response = if_else(
-      str_detect(as.character(response), "novel"),
-      "Novel",
-      "Learned"),
-    response = factor(response, levels = c("Learned", "Novel")),
-    model = "Car only"
-  )
-
-##Car model
-diff_summary_car <- preds_b3 %>%
-  ungroup() %>%
-  select(response, car, .draw, .epred) |>
-  group_by(response, car) %>%
-  median_qi(.epred, .width = 0.95)
-```
-
-*Threshold*: Regarding the threshold (response caution) predictions, visual inspections of the predictions show that as car recognition ability increases, the response caution for both, the Learned and Novel responses, increases (@fig-prediction-thresh-car).
-
-```{r}
-#| label: ppreds-thresh-car-plot-2x2
-#| include: false
-plot_preds_contrast <- function(diff_summary, title) {
-  ggplot(
-    diff_summary,
-    aes(
-      x = car,
-      y = .epred,
-      ymin = .lower,
-      ymax = .upper,
-      fill = response,
-      colour = response
-    )
-  ) +
-    geom_ribbon(alpha = 0.3, color = NA) +
-    geom_line(linewidth = 1) +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    facet_wrap(~response) +
-    labs(
-      title = title,
-      x = "Car recognition (centred)",
-      y = "Predicted threshold"
-    ) +
-    theme(legend.position = "none")
-}
-
-p_contrast_b3 <- plot_preds_contrast(diff_summary_car, "")
-```
-
-```{r}
-#| label: fig-prediction-thresh-car
-#| fig-cap: "Predicted threshold values from car recognition ability scores for learned and novel responses"
-#| layout-nrow: 1
-#| warning: false
-#| fig-width: 10
-#| fig-height: 7
-p_contrast_b3
-```
-
-```{r}
-#| label: ppreds-drift-car-wrangle
-#| include: false
-# --- all newdata grids ---
-
-# b3: car only - drfit rate
-newdata_b3 <- expand_grid(
-  condition = factor(
-    c("learned.false", "learned.true", "novel.false", "novel.true"),
-    levels = c("learned.false", "learned.true", "novel.false", "novel.true")
-  ),
-  car = seq(-15, 15, by = 1)
-)
-
-# --- get posterior preds ---
-preds_b3 <- newdata_b3 |>
-  add_epred_draws(b3_drift, ndraws = 1000, re_formula = NA) |>
-  mutate(
-    stimulus = if_else(
-      str_detect(as.character(condition), "novel"),
-      "novel",
-      "learned"
+    Parameter = if_else(str_starts(parameter, "drift"), "Drift", "Threshold"),
+    Condition = if_else(str_detect(parameter, "learned"), "Learned", "Novel"),
+    Accuracy  = case_when(
+      str_ends(parameter, "_true")      ~ "TRUE",
+      str_ends(parameter, "_false")     ~ "FALSE",
+      TRUE                              ~ "-"
     ),
-    accuracy = if_else(
-      str_detect(as.character(condition), "true"),
-      "TRUE",
-      "FALSE"
-    ),
-    stimulus = factor(stimulus, levels = c("learned", "novel")),
-    accuracy = factor(accuracy, levels = c("FALSE", "TRUE")),
-    model = "Car only"
-  )
-
-# --- contrast data ---
-contrasts_drift <- bind_rows(
-  preds_b3 |>
-    filter(car %in% c(-15, 15)) |>
-    ungroup() |>
-    mutate(car_level = if_else(car == 15, "high", "low"))
-) |>
-  select(model, condition, stimulus, accuracy, .draw, .epred, car_level) |>
-  pivot_wider(names_from = car_level, values_from = .epred) |>
-  mutate(
-    diff = high - low
-  )
-
-# discrimination (true - false) per condition at high vs low face
-discrim_contrast <- bind_rows(
-  preds_b3 |>
-    filter(car %in% c(-15, 15)) |>
-    ungroup() |>
-    mutate(car_level = if_else(car == 15, "high", "low"), car = 0)
-) |>
-  select(model, stimulus, accuracy, .draw, .epred, car_level) |>
-  # create a combined key so we pivot both dimensions at once
-  mutate(key = paste(accuracy, car_level, sep = "_")) |>
-  select(-accuracy, -car_level) |>
-  pivot_wider(names_from = key, values_from = .epred) |>
-  mutate(
-    discrim_high = TRUE_high - FALSE_high,
-    discrim_low = TRUE_low - FALSE_low,
-    discrim_diff = discrim_high - discrim_low
-  )
-
-# novel - learned discrimination contrast
-# i.e., does face ability affect discrimination more for novel than learned?
-learned_novel_contrast <- discrim_contrast |>
-  select(model, stimulus, .draw, discrim_diff) |>
-  pivot_wider(names_from = stimulus, values_from = discrim_diff) |>
-  mutate(novel_vs_learned = novel - learned)
-```
-
-*Drift rate (TRUE and FALSE)*: Regarding the drift rate (TRUE) and (FALSE), visual inspections of the predictions show that, as car recognition ability increases, both drift rate (TRUE and FALSE) for both stimuli conditions (Learned and Novel) increases as well. In summary, as car recognition ability increases, the accumulation of signal (drift rate TRUE) and the accumulation of noise (FALSE) increase, regardless of the stimulus condition (@fig-prediction-drift-car). 
-
-```{r}
-#| label: ppreds-drift-plot-2x2-supp
-#| include: false
-condition <- c("novel" = "Novel", "learned" = "Learned")
-plot_preds_2x2 <- function(preds, title) {
-  ggplot(
-    preds,
-    aes(
-      x = car,
-      y = .epred,
-      fill = accuracy,
-      colour = accuracy
-    )
-  ) +
-    stat_lineribbon(alpha = 0.4, .width = c(0.66, 0.95)) +
-    scale_fill_manual(values = myColors_acc_2) +
-    scale_colour_manual(values = myColors_acc_2) +
-    facet_wrap(~stimulus, nrow = 1, labeller = labeller(stimulus = condition)) +
-    labs(
-      title = title,
-      x = "Car recognition (centred)",
-      y = "Predicted drift rate",
-      fill = NULL,
-      colour = NULL
-    ) +
-    theme(legend.position = "bottom")
-}
-
-p_2x2_b3 <- plot_preds_2x2(preds_b3, "")
-```
-
-```{r}
-#| label: fig-prediction-drift-car
-#| fig-cap: "Predicted drfit rate (TRUE and FALSE) values from car recognition ability scores for learned and novel faces"
-#| layout-nrow: 1
-#| warning: false
-#| fig-width: 10
-#| fig-height: 7
-p_2x2_b3
-```
-
-```{r}
-#| label: ppreds-drift-constrasts-supp
-#| include: false
-##Face model
-# split condition back into learned/novel and true/false, then difference
-
-diff_draws_car <- preds_b3 %>%
-  ungroup() %>%
-  separate(condition, into = c("learned_novel", "TRUE_FALSE"), sep = "\\.") %>%
-  select(learned_novel, TRUE_FALSE, car, .draw, .epred) %>%
-  pivot_wider(names_from = TRUE_FALSE, values_from = .epred) %>%
-  mutate(diff = true - false)
-
-# summarize with 95% QI, as a function of face
-diff_summary_car <- diff_draws_car %>%
-  group_by(learned_novel, car) %>%
-  median_qi(diff, .width = 0.95)
-
-#calculate the slopes
-slope_draws_car <- b3_drift %>%
-  spread_draws(
-    `b_conditionlearned.true:car`,
-    `b_conditionlearned.false:car`,
-    `b_conditionnovel.true:car`,
-    `b_conditionnovel.false:car`
+    med  = sprintf("%.2f", r),
+    qi   = sprintf("[%.2f, %.2f]", .lower, .upper),
+    sign = case_when(.lower > 0 ~ "pos", .upper < 0 ~ "neg", TRUE ~ "none")
   ) %>%
-  mutate(
-    learned_slope_diff = `b_conditionlearned.true:car` -
-      `b_conditionlearned.false:car`,
-    novel_slope_diff = `b_conditionnovel.true:car` -
-      `b_conditionnovel.false:car`
-  ) %>%
-  select(.draw, learned_slope_diff, novel_slope_diff) %>%
-  pivot_longer(-.draw, names_to = "learned_novel", values_to = "slope_diff")
+  filter(Accuracy %in% c("TRUE", "FALSE")) %>%    
+  select(Parameter, Condition, Accuracy, metric, med, qi, sign) %>%
+  pivot_wider(names_from = metric, values_from = c(med, qi, sign),
+              names_glue = "{.value}_{metric}") %>%
+  arrange(factor(Parameter, levels = c("Threshold", "Drift")),
+          Condition,
+          factor(Accuracy, levels = c("-", "TRUE", "FALSE")))
 
-slope_table_car <- slope_draws_car %>%
-  group_by(learned_novel) %>%
-  median_qi(slope_diff, .width = 0.95)
+# Display table: repeated column names are fine, the metric sits in the group header
+tab_df <- cor_wide %>%
+  select(Parameter, Condition, Accuracy,
+         med_mean, qi_mean, med_max, qi_max, med_rate, qi_rate) %>%
+  as.data.frame()
+names(tab_df) <- c("Parameter", "Condition", "Accuracy", rep(c("Median r", "95% QI"), 3))
+
+
+metric_cols <- list(mean = 4:5, max = 6:7, rate = 8:9)
+
+tab <- tt_manuscript(tab_df,
+          notes = "Note. Blue = 95% QI entirely above zero; red = 95% QI entirely below zero.") |>
+  group_tt(j = list("Pupil mean" = 4:5, "Pupil max" = 6:7, "Pupil change rate" = 8:9)) |>
+  style_tt(i = -1, bold = TRUE, fontsize = 0.8)
+
+for (m in names(metric_cols)) {
+  s <- cor_wide[[paste0("sign_", m)]]
+  if (any(s == "pos")) tab <- style_tt(tab, i = which(s == "pos"), j = metric_cols[[m]], color = "#2166AC")
+  if (any(s == "neg")) tab <- style_tt(tab, i = which(s == "neg"), j = metric_cols[[m]], color = "#B2182B")
+}
+tab
 ```
 
-*Drift rate (TRUE-FALSE)*: Regarding the drift rate (TRUE-FALSE), or the signal-to-noise ratio provided by the stimulus, visual inspections of the predictions show that, as car recognition ability increases, only the drift rate for Novel faces increases, whereas the drift rate for Learned face does not follow this pattern. In summary, as car recognition ability increases, the ability to discriminate Novel faces increases but not the ability to discriminate Learned faces (@fig-prediction-drift-constrast-car).
+## Joint modelling
+
+We calculated the entire correlation matrix from the posterior median draws of the joint model of mean pupil size and LBA parameters. This correlation matrix can be seen in @fig-tier1-heatmap-supp.
 
 ```{r}
-#| label: ppreds-drift-constrasts-plot-car
+#| label: joint-model-matrix-supp
 #| include: false
-condition <- c("novel" = "Novel", "learned" = "Learned")
-plot_preds_contrast <- function(diff_summary, title) {
-  ggplot(
-    diff_summary,
-    aes(
-      x = car,
-      y = diff,
-      ymin = .lower,
-      ymax = .upper,
-      fill = learned_novel,
-      colour = learned_novel
+load(here("samples/joint_model_try_1.RData"))
+joint_fit <- emc
+
+corr_draws_wide <- EMC2::parameters(joint_fit, selection = "correlation") |>
+  as_tibble()
+
+```
+
+```{r}
+#| label: tier1-full-matrix-supp
+#| include: false
+
+corr_summ <- summary(joint_fit, selection = "correlation")
+all_pars <- names(corr_summ)
+
+corr_vec_to_matrix <- function(corr_vec, param_names) {
+  n <- length(param_names)
+  mat <- matrix(1, nrow = n, ncol = n)
+  rownames(mat) <- colnames(mat) <- param_names
+  n_filled <- 0
+  for (col_name in names(corr_vec)) {
+    parts <- str_split(col_name, "\\.", n = 2)[[1]]
+    if (length(parts) == 2) {
+      i <- match(parts[1], param_names)
+      j <- match(parts[2], param_names)
+      if (!is.na(i) && !is.na(j)) {
+        mat[i, j] <- mat[j, i] <- corr_vec[[col_name]]
+        n_filled <- n_filled + 1
+      }
+    }
+  }
+  # sanity check: catches a repeat of the all_pars mismatch bug immediately,
+  # instead of silently producing an all-1s matrix again.
+  if (n_filled == 0) {
+    warning(
+      "No off-diagonal correlations were matched - check that param_names ",
+      "matches the names actually used in corr_vec's column labels."
     )
-  ) +
-    geom_ribbon(alpha = 0.3, color = NA) +
-    geom_line(linewidth = 1) +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    facet_wrap(~learned_novel, labeller = labeller(learned_novel = condition)) +
-    labs(
-      title = title,
-      x = "Car recognition (centred)",
-      y = "Predicted drift rate (TRUE − FALSE)"
-    ) +
-    theme(legend.position = "none")
+  } else {
+    cat(
+      "Filled",
+      n_filled,
+      "off-diagonal correlation pairs (expect",
+      n * (n - 1) / 2,
+      ").\n"
+    )
+  }
+  mat
 }
 
-p_contrast_b1 <- plot_preds_contrast(diff_summary_car, "")
+median_corrs <- corr_draws_wide |>
+  summarise(across(everything(), median))
+
+full_corr_matrix <- corr_vec_to_matrix(median_corrs, all_pars)
 ```
 
 ```{r}
-#| label: fig-prediction-drift-constrast-car
-#| fig-cap: "Predicted drift rate (TRUE-FALSE) values from car recognition ability for learned and novel faces"
-#| layout-nrow: 1
-#| warning: false
-#| fig-width: 10
-#| fig-height: 7
-p_contrast_b1
+#| label: corr-matrix-long-supp
+#| include: false
+full_corr_long <- as_tibble(full_corr_matrix, rownames = "param1") |>
+  pivot_longer(-param1, names_to = "param2", values_to = "r")
 ```
 
-{{< pagebreak >}}
+```{r}
+#| label: fig-tier1-heatmap-supp
+#| fig-cap: "Correlation matrix of the posterior medians of the group-level correlations between LBA and pupil parameters estimated in the joint model. Blue = positive correlation; red = negative correlation."
+#| fig-height: 6
+ggplot(full_corr_long, aes(x = param1, y = param2, fill = r)) +
+  geom_tile(colour = "white", linewidth = 0.3) +
+  scale_fill_gradient2(
+    low = "#B2182B",
+    mid = "white",
+    high = "#2166AC",
+    midpoint = 0,
+    limits = c(-1, 1)
+  ) +
+  coord_fixed() +
+  labs(
+    x = NULL,
+    y = NULL,
+    fill = "r"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.line   = element_blank(),
+        axis.ticks  = element_blank())
+```
+
+

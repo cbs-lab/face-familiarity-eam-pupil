@@ -31,7 +31,7 @@ affiliations:
     name: ETH Zürich
     department: Learning and Instruction Laboratory, Department of Humanities, Social and Political Sciences
 abstract: |
- 
+ Pupil size is sensitive to recognition memory: previously encountered items evoke larger dilation than new items, a pattern known as the pupil old/new effect. However, pupillometric studies have mostly sorted pupil responses by accuracy, which cannot reveal which decision process the pupil reflects. Here, we combined pupillometry with evidence-accumulation modelling. Thirty-one participants completed an old/new face recognition task while their pupil size was recorded. A hierarchical linear ballistic accumulator model estimated the quality of evidence accumulation (drift rate) and response caution (threshold), which we related to mean pupil size, peak pupil size and the rate of pupil change. Correctly recognised learned faces elicited larger pupil responses than correctly rejected novel faces, and false alarms elicited larger pupils than misses, suggesting that the pupil tracks the subjective judgement of a face as “old”. Better evidence discrimination was associated with relatively larger pupil responses for learned faces but smaller ones for novel faces, a reversal reproduced by an exploratory joint model. The pupil may therefore reflect how clearly memory evidence signals “old” or “new”: a clear memory trace enlarges the pupil, whereas a clearly absent one reduces it. The threshold for “learned” responses was associated only with the rate of pupil change, suggesting that pupil dynamics may track adjustments in response caution. Although modest, these associations show the added value of linking latent decision parameters to physiological markers of cognitive state, which accuracy-based analyses cannot estimate.
 keywords: [face perception, pupillometry, familiarity, decision models, evidence accumulation modelling, joint-modelling]
 wordcount: true
 date: last-modified
@@ -59,7 +59,7 @@ format:
         href: supplementary.pdf
         icon: file-pdf
       - text: GitHub Repository
-        href: https://github.com/rich-ramsey/
+        href: https://github.com/cbs-lab/face-familiarity-eam-pupil
         icon: github
       - text: OSF Repository
         href: https://osf.io/65bt2
@@ -194,26 +194,62 @@ pd2 <- position_dodge(1)
 
 # Introduction
 
-Over the last two decades, pupillometry has become an increasingly popular tool for accessing cognitive processing non-invasively and with high temporal resolution. Pupil size has been linked to a range of cognitive processes, including attention [@Binda2014; @Naber2013; @WangMunoz2015], emotional arousal [@Bradley2008], decision-making [@Murphy2014; @Urai2017], and recognition memory [@GoldingerPapesh2012; @Otero2011]. In recognition memory specifically, a well-documented pattern is the "pupil old/new effect": a greater pupil dilation for the correct recognition of "old" items than for the correct rejection of "new" items, taken to reflect an association between pupil dynamics and memory strength [@Otero2011; @Vo2008; see @Lapteva2024, for a meta-analysis]. In this study, we use a computational modelling approach to investigating the association between face recognition memory and pupil dynamics. Specifically, we link the latent parameters of an evidence-accumulation model to pupil dynamics during a face recognition task.
+Over the last two decades, pupillometry has become an increasingly popular tool for accessing cognitive processing non-invasively and with high temporal resolution.
+Pupil size has been linked to a range of cognitive processes, including attention [@Binda2014; @Naber2013; @WangMunoz2015], emotional arousal [@Bradley2008], decision-making [@Murphy2014; @Urai2017], and recognition memory [@GoldingerPapesh2012; @Otero2011].
+In recognition memory specifically, a well-documented pattern is the "pupil old/new effect": a greater pupil dilation for the correct recognition of "old" items than for the correct rejection of "new" items, taken to reflect an association between pupil dynamics and memory strength [@Otero2011; @Vo2008; see @Lapteva2024, for a meta-analysis].
+In this study, we use a computational modelling approach to investigating the association between face recognition memory and pupil dynamics.
+Specifically, we link the latent parameters of an evidence-accumulation model to pupil dynamics during a face recognition task.
 
-The pupil old/new effect is a well-documented observation in recognition memory experiments using pupillometry. It refers to a larger pupil dilation for correctly recognised "old" stimuli than for correctly rejected "new" stimuli [@Vo2008; @HeaverHutton2011]. This difference has been proposed to index the strength of the memory trace [@Otero2011], and it is larger when recognition relies on recollection (retrieving specific contextual details of the earlier encounter) rather than familiarity (a sense of having encountered the item before without retrieving such details) [@KafkasMontaldi2015; @TaikhBodner2022]. The effect also extends to false memories. New items wrongly judged "old" elicit larger dilation than correct rejections, though smaller than hits [@Otero2011; @Montefinese2013; @BrocherGraf2016]. This suggests that the participant's subjective judgement of a stimulus as "old" is enough to evoke a stronger pupillary response, regardless of accuracy. Two main explanations have been offered. Early accounts attributed the effect to the greater cognitive effort involved in retrieving an episodic memory [@Vo2008; @GoldingerPapesh2012]. More recent work instead proposes that recognising an item acts as a salient signal that triggers an attentional orienting response. In line with this account, the effect is larger when participants expect a test item to be new but then recognise it as old [@Mill2016].
+The pupil old/new effect is a well-documented observation in recognition memory experiments using pupillometry.
+It refers to a larger pupil dilation for correctly recognised "old" stimuli than for correctly rejected "new" stimuli [@Vo2008; @HeaverHutton2011].
+This difference has been proposed to index the strength of the memory trace [@Otero2011], and it is larger when recognition relies on recollection (retrieving specific contextual details of the earlier encounter) rather than familiarity (a sense of having encountered the item before without retrieving such details) [@KafkasMontaldi2015; @TaikhBodner2022].
+The effect also extends to false memories.
+New items wrongly judged "old" elicit larger dilation than correct rejections, though smaller than hits [@Otero2011; @Montefinese2013; @BrocherGraf2016].
+This suggests that the participant's subjective judgement of a stimulus as "old" is enough to evoke a stronger pupillary response, regardless of accuracy.
+Two main explanations have been offered.
+Early accounts attributed the effect to the greater cognitive effort involved in retrieving an episodic memory [@Vo2008; @GoldingerPapesh2012].
+More recent work instead proposes that recognising an item acts as a salient signal that triggers an attentional orienting response.
+In line with this account, the effect is larger when participants expect a test item to be new but then recognise it as old [@Mill2016].
 
-Pupillometric studies of face recognition remain scarce, but several findings suggest that pupil size is sensitive to face memory. When faces are learned during an experiment, prior exposure modulates pupil responses at test, and these effects appear for both own- and other-race faces [@Goldinger2009; @Wu2012]. Pupil dilation during encoding also predicts later recognition of faces [@CroninLippMarinovic2023]. In eyewitness lineups, participants who correctly identify the culprit show larger pupils for the target than for fillers, sometimes even when they are unsure of their choice, which points to covert recognition [@ElphickPikeHole2020]. Pre-experimentally familiar faces produce a similar pattern: familiar faces reduce the initial constriction and increase dilation relative to unknown faces, most strongly for one's own face [@Schwetlick2025]. This familiarity response survives perceptual suppression that abolishes overt recognition [@MejiaValdesSosaBobes2024] and appears for personally familiar faces presented in rapid serial streams [@Chen2026]. However, not all studies agree. One study found smaller dilations for more familiar faces, but only during an active task, suggesting that task demands shape the direction of the effect [@MatyjekBayerDziobek2021]. 
+Pupillometric studies of face recognition remain scarce, but several findings suggest that pupil size is sensitive to face memory.
+When faces are learned during an experiment, prior exposure modulates pupil responses at test, and these effects appear for both own- and other-race faces [@Goldinger2009; @Wu2012].
+Pupil dilation during encoding also predicts later recognition of faces [@CroninLippMarinovic2023].
+In eyewitness lineups, participants who correctly identify the culprit show larger pupils for the target than for fillers, sometimes even when they are unsure of their choice, which points to covert recognition [@ElphickPikeHole2020].
+Regarding familiar faces, they reduce the initial constriction and increase dilation relative to unknown faces, most strongly for one's own face [@Schwetlick2025].
+This familiarity response survives perceptual suppression that abolishes overt recognition [@MejiaValdesSosaBobes2024] and appears for personally familiar faces presented in rapid serial streams [@Chen2026].
+However, not all studies agree.
+One study found smaller dilations for more familiar faces, but only during an active task, suggesting that task demands shape the direction of the effect [@MatyjekBayerDziobek2021].
 
-The pupil old/new effect has typically been examined by sorting pupil responses according to response accuracy (hits, misses, false alarms and correct rejections). This approach overlooks a second, equally informative aspect of performance: response times. Considering accuracy or response times in isolation can lead to misleading conclusions about the underlying cognitive processes [REF Wagnemakers]. Evidence-accumulation models offer a principled solution to this problem [@Ratcliff1978; @BrownHeathcote2008]. They assume that decisions arise from the accumulation of evidence until a response threshold is reached, and they decompose choices and full response time distributions into latent components: the rate of evidence accumulation (drift rate), the amount of evidence required to respond (threshold), response bias, and non-decision time (see @fig-LBA). Linking pupil size to these parameters, rather than to raw accuracy categories, can therefore specify which decision process pupil dilation reflects. Previous work has already related pupil dilation to decision thresholds [@Cavanagh2014], to reduced choice bias in evidence accumulation [@deGee2014, @deGee2017], including in memory-based decisions [@deGee2020], and to urgency signals [@Murphy2016]. However, these associations have not yet been tested in face recognition, a domain in which the effects of familiarity on decision processes have been characterized behaviorally [@fournier2026familiarity], but not yet linked to pupil dynamics.
-
+The pupil old/new effect has typically been examined by sorting pupil responses according to response accuracy (hits, misses, false alarms and correct rejections).
+This approach overlooks a second, equally informative aspect of performance: response times.
+Considering accuracy or response times in isolation can lead to misleading conclusions about the underlying cognitive processes [@Wagenmakers2007].
+Evidence-accumulation models offer a principled solution to this problem [@Ratcliff1978; @BrownHeathcote2008].
+They assume that decisions arise from the accumulation of evidence until a response threshold is reached, and they decompose choices and full response time distributions into latent components: the rate of evidence accumulation (drift rate), the amount of evidence required to respond (threshold), response bias, and non-decision time (see @fig-LBA).
+Linking pupil size to these parameters, rather than to raw accuracy categories, can therefore specify which decision process pupil dilation reflects.
+Previous work has already related pupil dilation to decision thresholds [@Cavanagh2014], to reduced choice bias in evidence accumulation [@deGee2014, @deGee2017], including in memory-based decisions [@deGee2020], and to urgency signals [@Murphy2016].
+However, these associations have not yet been tested in face recognition, a domain in which the effects of familiarity on decision processes have been characterized behaviorally [@fournier2026familiarity], but not yet linked to pupil dynamics.
 
 :::: {.place arguments="bottom, scope: \"parent\", float: true"}
 :::{#fig-LBA fig-cap = "Schematic of the linear ballistic accumulator (LBA) model"}
 ![](figures/LBA_schematique.png){width="90%"}
 :::
-
 *This diagram represents the accumulation process one trial of a perceptual decision task for the linear ballistic accumulator (LBA;* @BrownHeathcote2008*). Participants are required to chose between two options (Response 1 and Response 2). In a LBA model, there is a separated accumulation of evidence (v) for each response option. In this example, the correct response is Response 1. The accumulator on the left is the accumulator for the correct response (Response 1), and the green line in represents the rate at which the evidence accumulates in favor of that response option. The accumulator on the right is the accumulator for the incorrect response (Response 2), and the dash red line represents the rate at which the evidence accumulates in favor of this response option. Once the accumulated evidence crosses the threshold (b) of a response option, the corresponding response is chosen (in this case Response 1).* 
 ::::
 
-In the present study, therefore, we combined pupillometry with computational modelling to investigate how latent computational processes in face recognition are related to pupil size dynamics. We previously investigated the extent to which drift rate and threshold are associated with pupil size dynamics for old (learned) and new (novel) faces [@fournier2026familiarity]. Using an old/new recognition task in combination with evidence accumulation modelling, we found that novel compared to familiar faces induced a greater accumulation of evidence (drift rate), as well as modest increase in response caution (threshold). Given these past results, the present study had two aims. First, we sought to establish the pupil old/new effect in the context of face recognition memory. Second, we examined how pupil dynamics relate to the latent processes underlying face recognition decisions. Specifically, we asked whether the quality of evidence accumulation (drift rate) and response caution (threshold) estimated form a face recognition task were associated with three pupil metrics: mean pupil size, peak pupil size, and the rate of pupil change.
+In the present study, therefore, we combined pupillometry with computational modelling to investigate how latent computational processes in face recognition are related to pupil size dynamics.
+We previously investigated the extent to which drift rate and threshold are associated with pupil size dynamics for old (learned) and new (novel) faces [@fournier2026familiarity].
+Using an old/new recognition task in combination with evidence accumulation modelling, we found that novel compared to familiar faces induced a greater accumulation of evidence (drift rate), as well as modest increase in response caution (threshold).
+Given these past results, the present study had two aims.
+First, we sought to establish the pupil old/new effect in the context of face recognition memory.
+Second, we examined how pupil dynamics relate to the latent processes underlying face recognition decisions.
+Specifically, we asked whether the quality of evidence accumulation (drift rate) and response caution (threshold) estimated form a face recognition task were associated with three pupil metrics: mean pupil size, peak pupil size, and the rate of pupil change.
 
-Based on previous memory recognition studies, we expected to observe a pupil old/new effect for faces. On correct trials, pupil size should be larger for correctly recognized learned faces (hits) than for correctly rejected novel faces (correct rejections). On incorrect trials, we expected this pattern to invert. Because the pupil response tracks the participant's judgement that an item is "old" rather than the item's true status [@KafkasMontaldi2015; @Montefinese2013; @Oliveira2021; @Otero2011], pupil size should be larger for novel faces wrongly judged as learned (false alarms) than for learned faces wrongly judged as novel (misses).  Finally, we expected individuals with larger pupil-size differences between conditions to also show larger differences in drift rate and/or threshold. Drift rate for learned faces should positively correlate with pupil whereas the predictions are less clear for drift rate for novel faces or for threshold.
+Based on previous memory recognition studies, we expected to observe a pupil old/new effect for faces.
+On correct trials, pupil size should be larger for correctly recognized learned faces (hits) than for correctly rejected novel faces (correct rejections).
+On incorrect trials, we expected this pattern to invert.
+Because the pupil response tracks the participant's judgement that an item is "old" rather than the item's true status [@KafkasMontaldi2015; @Montefinese2013; @Oliveira2021; @Otero2011], pupil size should be larger for novel faces wrongly judged as learned (false alarms) than for learned faces wrongly judged as novel (misses).
+Finally, we expected individuals with larger pupil-size differences between conditions to also show larger differences in drift rate and/or threshold.
+Drift rate for learned faces should positively correlate with pupil whereas the predictions are less clear for drift rate for novel faces or for threshold.
 
 # Method and Materials
 
@@ -221,7 +257,7 @@ Based on previous memory recognition studies, we expected to observe a pupil old
 
 We report how we determined our sample size, all data exclusions (if any), all manipulations, and all measures in the study [@simonsConstraintsGeneralityCOG2017].
 The research question, hypotheses, experimental design, planned analysis, and exclusion criteria were preregistered (<https://osf.io/yr2z6/overview>).
-Raw data, preprocessing code for pupil data as well as the data analysis code are available on Github (link github).
+Raw data, preprocessing code for pupil data as well as the data analysis code are available on Github (<https://github.com/cbs-lab/face-familiarity-eam-pupil>).
 
 ```{r}
 #| label: exclusion-all
@@ -262,7 +298,7 @@ max_age <- as.numeric(max(demo$age))
 ## Participants
 
 All participants were recruited using either an online recruiting platform (<https://marktplatz.uzhalumni.ch>) or via a mailing list dedicated to students from the Department of Psychology of the University of Zurich.
-`r completed` participants completed the experiment. 
+`r completed` participants completed the experiment.
 Following our preregistered exclusion criterion, `r exclude_missed_trials` participant was excluded because their percentage of missed trials was higher than 40%, `r exclude_acc` was removed because the overall accuracy was lower than 55% and finally `r exclude_pupil` participant was removed because the percentage of trials containing more that 20% of pupil data missing samples during the baseline period or during the stimulus presentation was higher than 40%.
 In the end, data from `r final` participants (`r male` men and `r female` women) were retained for the analysis and the LBA modeling.
 Ages ranged from `r min_age` to `r max_age` ($M_{age} =$ `r mean_age`, $SD_{age} =$ `r sd_age`) and each participant received 25 CHF for the completion of the study.
@@ -270,47 +306,97 @@ This experiment was accepted by the ethics committee of the Federal Institute of
 
 ## Material
 
-Stimuli were presented on a 24-inch monitor (1920 × 1200 px, 60 Hz refresh rate, Philips PHL 240P4QPY) at a viewing distance of approximately 65 cm.  Stimulus presentation and response collection were implemented in Psychopy Builder R2024a (version -> check) running on a Linux operating system (Ubuntu 22.04.5 LTS). The code used for the experimental procedure can be found on OSF (link OSF). Pupil data for the left and right eye were recorded using a Tobii Pro Spark (Tobii AB) eye tracking device at a 60 Hz sampling rate and measured in mm. The eye tracking device was placed at the bottom of the desktop computer screen. The head of the participants was fixed using a chin rest, such that the distance between the eyes and the computer screen was the same for all participants.
+Stimuli were presented on a 24-inch monitor (1920 × 1200 px, 60 Hz refresh rate, Philips PHL 240P4QPY) at a viewing distance of approximately 65 cm.
+Stimulus presentation and response collection were implemented in Psychopy Builder (v2025.2.3; @Peirce2019) running on a Linux operating system (Ubuntu 22.04.5 LTS).
+Pupil data for the left and right eye were recorded using a Tobii Pro Spark (Tobii AB, Danderyd, Sweden) eye tracking device at a 60 Hz sampling rate and measured in mm.
+The eye tracking device was placed at the bottom of the desktop computer screen.
+The head of the participants was fixed using a chin rest, such that the distance between the eyes and the computer screen was the same for all participants.
 
 ## Procedure
 
-The experimental procedure is similar to the one used by @fournier2026familiarity. The face recognition task was divided into two parts: a familiarization part and a recognition part (see @fig-proc-exp-pupil). In the familiarization part, participants were instructed to memorize the identity of unknown faces. One familiarization trial consisted of passively viewing 6 face images of the same identity presented one after the other but varying in viewing points (3/4 left view, frontal view and 3/4 right view) and the colorimetry (colorful image, gray scale image). Each image was presented for 0.75 second and participants underwent 30 familiarization trials. The faces presented during the familiarization part were considered the “Learned faces” within-subject condition.
+The experimental procedure is similar to the one used by @fournier2026familiarity.
+The face recognition task was divided into two parts: a familiarization part and a recognition part (see @fig-proc-exp-pupil).
+In the familiarization part, participants were instructed to memorize the identity of unknown faces.
+One familiarization trial consisted of passively viewing 6 face images of the same identity presented one after the other but varying in viewing points (3/4 left view, frontal view and 3/4 right view) and the colorimetry (colorful image, gray scale image).
+Each image was presented for 0.75 second and participants underwent 30 familiarization trials.
+The faces presented during the familiarization part were considered the “Learned faces” within-subject condition.
 
-In the recognition part, participants completed three blocks of 60 recognition trials, each block being separated from another by a short break. Half of the trials were “Learned” identities and the other half were “Novel”, previously unseen, identities. Each recognition trial was divided into three parts: a fixation cross, a scrambled image of a face and the gray scale image of the same face. During the fixation cross presentation, participants were told to look at the fixation cross in the middle of the screen. They were also instructed to blink during that time if they needed to and to avoid blinking after the fixation cross disappeared. During the scramble image presentation, participant were told to fixate the scramble image, and not to do anything else. Finally, during the face image presentation, participants were asked to choose if they had previously seen this person in the familiarization part or not. If they did, they should press the “q” key and if they did not, the “p” key. One important note is that participants never saw two pictures of the same learned identity in the same block and never the same picture (3/4 left view, frontal view and 3/4 right view) of a learned identity during the entire recognition part. Furthermore, each novel identity picture was only presented once during the recognition part. Response time [s] and accuracy were collected after each recognition trial. A response time limit of 2500 ms has been set for each recognition trial. If participants did not press a key before the response time limit, the trial was discarded from further analysis and not replaced. The experiment took place in a dim light testing room. We measured the illuminance from the chin rest pointing towards the lamps in the ceiling of the resting room (illuminance = 29.5 lux).
+In the recognition part, participants completed three blocks of 60 recognition trials, each block being separated from another by a short break.
+Half of the trials were “Learned” identities and the other half were “Novel”, previously unseen, identities.
+Each recognition trial was divided into three parts: a fixation cross, a scrambled image of a face and the gray scale image of the same face.
+During the fixation cross presentation, participants were told to look at the fixation cross in the middle of the screen.
+They were also instructed to blink during that time if they needed to and to avoid blinking after the fixation cross disappeared.
+During the scramble image presentation, participant were told to fixate the scramble image, and not to do anything else.
+Finally, during the face image presentation, participants were asked to choose if they had previously seen this person in the familiarization part or not.
+If they did, they should press the “q” key and if they did not, the “p” key.
+One important note is that participants never saw two pictures of the same learned identity in the same block and never the same picture (3/4 left view, frontal view and 3/4 right view) of a learned identity during the entire recognition part.
+Furthermore, each novel identity picture was only presented once during the recognition part.
+Response time \[s\] and accuracy were collected after each recognition trial.
+A response time limit of 2500 ms has been set for each recognition trial.
+If participants did not press a key before the response time limit, the trial was discarded from further analysis and not replaced.
+The experiment took place in a dim light testing room.
+We measured the illuminance from the chin rest pointing towards the lamps in the ceiling of the resting room (illuminance = 29.5 lux).
 
 :::: {.place arguments="bottom, scope: \"parent\", float: true"}
 :::{#fig-proc-exp-pupil fig-cap = "Experimental procedure of the face recognition task"}
 ![](figures/Experimental_procedure_pupil.png)
 :::
+
 *The experimental procedure was divided into two parts: a familiarization part and a recognition part. a) In the familiarization part, participants were asked to memorize the face identity of 30 identities. For each identity, participants looked at 6 pictures depicting the same identity with different face orientation (3/4 left view, frontal view and 3/4 right view) and different colorimetry (color and gray scale images) in the order presented here: 3/4 left view, frontal view and 3/4 right view in color, followed by 3/4 right view, frontal view and 3/4 left view in gray scale. b) In each trial of the recognition part, participants had to decided if they recognize the face shown on the screen from the familiarization part. If they did, they had to press the "q" key and if the did not, the "p" key. They completed three blocks of 60 trials (half of them were from the familiarization part, half were novel faces). For the recognition part, only gray scale images of faces were used (for both learned faces and novel faces).* 
 ::::
 
 ## Stimuli
 
-The face images consisted of images selected from two different data sets: the Face Research Lab London Set ( <https://doi.org/10.6084/m9.figshare.5047666.v5>) and the Color FERET Database (<https://www.nist.gov/itl/products-and-services/color-feret-database>). From each selected identity, three face pictures at different viewpoints (3/4 left view, frontal view, ¾ right view) were cropped following the outline of the face and grey scaled. To ensure that the stimuli used are reproducible, we used the webmorphR R Package [@webmorph] to crop the face images. The code used to crop the images can be found on OSF (link OSF). The pictures obtained at this stage in the image processing pipeline were used in the familiarization part of the experimental task. 
+The face images consisted of images selected from two different data sets: the Face Research Lab London Set [@debruinefacelab2017] and the Color FERET Database (<https://www.nist.gov/itl/products-and-services/color-feret-database>).
+From each selected identity, three face pictures at different viewpoints (3/4 left view, frontal view, ¾ right view) were cropped following the outline of the face and grey scaled.
+To ensure that the stimuli used are reproducible, we used the webmorphR R Package [@webmorph] to crop the face images.
+The code used to crop the images can be found on Github (<https://github.com/cbs-lab/face-familiarity-eam-pupil>).
+The pictures obtained at this stage in the image processing pipeline were used in the familiarization part of the experimental task.
 
-Since pupil size is highly sensitive to brightness and contrast changes between stimuli, we equated the average pixel values (as a measure of brightness) and the standard deviation of pixel values in order to match brightness and contrast (mean brightness = 30.33, mean contrast= 41.42; @MathotVilotijevic2022). These images were then placed on a darker grey background covering the entire desktop screen.
-For the scrambled image described above, we used a custom Matlab code to scramble all the greyscale image of each face images. To ensure that there were no difference in brightness and contrast between the scrambled image and the face image, the same face image was used in each trial: first, the scrambled version of the image followed by the non-scrambled version of the image. The code used to scramble the face images can be found in OSF (link OSF).
+Since pupil size is highly sensitive to brightness and contrast changes between stimuli, we equated the average pixel values (as a measure of brightness) and the standard deviation of pixel values in order to match brightness and contrast (mean brightness = 30.33, mean contrast= 41.42; @MathotVilotijevic2022).
+These images were then placed on a darker grey background covering the entire desktop screen.
+For the scrambled image described above, we used a custom Matlab code to scramble all the greyscale image of each face images.
+To ensure that there were no difference in brightness and contrast between the scrambled image and the face image, the same face image was used in each trial: first, the scrambled version of the image followed by the non-scrambled version of the image.
+The code used to scramble the face images can be found in Github (<https://github.com/cbs-lab/face-familiarity-eam-pupil>).
 
-To assess if there was important variation in the difference between the luminous flux coming from the stimuli and the illuminance of the room, we averaged the luminous flux from all the images which were matched in brightness and contrast. The average luminous flux coming from our stimuli was 29.01 cd/m2 (SD = 1.19 cd/m2), a reasonably similar value to the 29.5 lux obtained from the illuminance measurement [@MathotVilotijevic2022]. 
+To assess if there was important variation in the difference between the luminous flux coming from the stimuli and the illuminance of the room, we averaged the luminous flux from all the images which were matched in brightness and contrast.
+The average luminous flux coming from our stimuli was 29.01 cd/m2 (SD = 1.19 cd/m2), a reasonably similar value to the 29.5 lux obtained from the illuminance measurement [@MathotVilotijevic2022].
 
 ## Pupil preprocessing and pupil metrics
 
-Pupil data was only collected during the recognition part of the experiment. Each participant underwent a 5-point calibration phase during the break in between the familiarization and the recognition part. Samples identified as blinks were set to NA. The blink window was extended by 75 ms on each side of the sample to remove partial blinks artifacts (i.e. lid drooping and reopening) that surrounds the “true” blink. Pupil samples that deviated more than 8 median absolute deviations from the median are set to NA. This preprocessing stage was run twice in sequence, where the second pass caught artefacts that were masked by larger ones in the first pass. Regarding NA samples, each trial was then evaluated separately for the baseline and the stimulus windows. A trial was discarded if more that 20% of the samples were NA in the baseline period (set to 200ms before the target onset) or in the stimulus period (from target onset to target offset; @MathotVilotijevic2022). The pupil data were then upsampled to a uniform time grid at 1000Hz sampling rate to ensure equally-spaces samples before interpolation and smoothing. Remaining NA samples were linearly interpolated. Finally, a zero-phase 4th-order Butterworth low-pass filter with a 6 Hz cutoff was applied to remove higher frequencies while keeping slower pupil responses. After interpolation, the pupil data were downsampled to 50 Hz to reduce the risk of autocorrelation in time-series analyses [@VanRij2019].
+Pupil data was only collected during the recognition part of the experiment.
+Each participant underwent a 5-point calibration phase during the break in between the familiarization and the recognition part.
+Samples identified as blinks were set to NA.
+The blink window was extended by 75 ms on each side of the sample to remove partial blinks artifacts (i.e. lid drooping and reopening) that surrounds the “true” blink.
+Pupil samples that deviated more than 8 median absolute deviations from the median are set to NA.
+This preprocessing stage was run twice in sequence, where the second pass caught artefacts that were masked by larger ones in the first pass.
+Regarding NA samples, each trial was then evaluated separately for the baseline and the stimulus windows.
+A trial was discarded if more that 20% of the samples were NA in the baseline period (set to 200ms before the target onset) or in the stimulus period (from target onset to target offset; @MathotVilotijevic2022).
+The pupil data were then upsampled to a uniform time grid at 1000Hz sampling rate to ensure equally-spaces samples before interpolation and smoothing.
+Remaining NA samples were linearly interpolated.
+Finally, a zero-phase 4th-order Butterworth low-pass filter with a 6 Hz cutoff was applied to remove higher frequencies while keeping slower pupil responses.
+After interpolation, the pupil data were downsampled to 50 Hz to reduce the risk of autocorrelation in time-series analyses [@VanRij2019].
 
-Pupil data was baseline corrected using a subtractive correction [@MathotVilotijevic2022], meaning that we subtracted the mean pupil size of the 200ms period before the stimulus onset from every pupil size sample during the stimulus presentation, for both left and right pupil size. The left and right eye signals were then averaged sample-by-sample into a single mean pupil trace. We discarded the pupil data from the last 100ms of the stimulus presentation (from 2400 to 2500ms) to ensure data quality.
+Pupil data was baseline corrected using a subtractive correction [@MathotVilotijevic2022], meaning that we subtracted the mean pupil size of the 200ms period before the stimulus onset from every pupil size sample during the stimulus presentation, for both left and right pupil size.
+The left and right eye signals were then averaged sample-by-sample into a single mean pupil trace.
+We discarded the pupil data from the last 100ms of the stimulus presentation (from 2400 to 2500ms) to ensure data quality.
 
-From the pupil traces, three different pupil metrics were extracted: the mean pupil size, the peak pupil size and the rate of pupil change. 
+From the pupil traces, three different pupil metrics were extracted: the mean pupil size, the peak pupil size and the rate of pupil change.
 
-*Mean pupil size*: The mean pupil size reflected the average of the pupil size across the entire face presentation (from 0 to 2400ms) for each trial and each participant. 
+*Mean pupil size*: The mean pupil size reflected the average of the pupil size across the entire face presentation (from 0 to 2400ms) for each trial and each participant.
 
-*Peak pupil size*: We calculated the maximum pupil size deviation from baseline after stimulus onset. We isolated the minimum sample value in the baseline (200ms before stimulus onset) and the maximum sample value in the stimulus presentation (2400ms after stimulus onset) in each trial for each participant. Following previous studies [@BrocherGraf2016; @KafkasMontaldi2015], we then average the value of the 3 preceding and 3 following samples from the two isolated sample values. For statistical analyses, we used the difference between the maximal pupil size during stimulus presentation and the minimal value during baseline, referred to as "peak pupil size" in the rest of the manuscript. 
+*Peak pupil size*: We calculated the maximum pupil size deviation from baseline after stimulus onset.
+We isolated the minimum sample value in the baseline (200ms before stimulus onset) and the maximum sample value in the stimulus presentation (2400ms after stimulus onset) in each trial for each participant.
+Following previous studies [@BrocherGraf2016; @KafkasMontaldi2015], we then average the value of the 3 preceding and 3 following samples from the two isolated sample values.
+For statistical analyses, we used the difference between the maximal pupil size during stimulus presentation and the minimal value during baseline, referred to as "peak pupil size" in the rest of the manuscript.
 
-*Rate of pupil change*: For each trial and participant, we calculated the first derivative of all the sample values from the stimulus onset or the stimulus offset (0-2400ms) in order to obtain the rate of pupil change. From this new time-series, we extracted the values of the samples 200ms before the behavioral response (response locked) and averaged them for each trial [@deGee2020].
+*Rate of pupil change*: For each trial and participant, we calculated the first derivative of all the sample values from the stimulus onset or the stimulus offset (0-2400ms) in order to obtain the rate of pupil change.
+From this new time-series, we extracted the values of the samples 200ms before the behavioral response (response locked) and averaged them for each trial [@deGee2020].
 
 ## Evidence accumulation modeling
 
-Model and prior specifications, as well as the model estimation procedures, are identical to the ones described in @fournier2026familiarity. Specifications of the priors are described in Supplementary Materials.
+Model and prior specifications, as well as the model estimation procedures, are identical to the ones described in @fournier2026familiarity.
+Specifications of the priors are described in Supplementary Materials.
 
 ### Model specifications
 
@@ -323,7 +409,6 @@ For example, when a Learned stimulus was presented, the Learned accumulator was 
 The difference in drift rate between the TRUE and FALSE accumulators reflects the quality of information supporting a decision, with larger differences indicating stronger and more discriminative evidence accumulation [@lewandowskyComputationalModelingCognition2018].
 The standard deviation of the TRUE accumulator was allowed to vary according to accumulator match status, whereas the standard deviation of the FALSE accumulator was constrained to be constant to ensure model identifiability [@donkinGettingMoreAccuracy2009].
 In the preregistered model, a single start-point parameter (A), and single non-decision time parameter (t0) were estimated.
-Alternative model specifications that permitted variation in these parameters are reported in the Supplementary Materials.
 
 ```{r}
 #| label: data-model-formula
@@ -350,7 +435,7 @@ tt_manuscript(
 )
 ```
 
-### Model estimation 
+### Model estimation
 
 Bayesian model estimated was carried using the EMC2 R package [@EMC2].
 Priors were chosen to be weakly-informative, meaning that they have little influence on the estimation (for more details regarding the priors of each model, see Supplementary Materials).
@@ -358,7 +443,7 @@ Two sampling steps were used to estimate the parameters.
 First, a separate estimation of the fixed effects for each participant was conducted.
 Parameter estimations were then used as the starting point for the full hierarchical parameter estimation.
 
-### Model fit 
+### Model fit
 
 To ensure that the fit of our model can capture most of the main trends in the data, graphical summaries of the posterior predictions were examined.
 Convergence plots and posterior predictive checks can be found in Supplementary Materials.
@@ -367,10 +452,13 @@ Convergence plots and posterior predictive checks can be found in Supplementary 
 
 ### Overview of the general analytical strategy
 
-First, the posterior distributions of LBA parameters were estimated and contrasts between conditions of interest were computed to ensure that we replicated the results found in @fournier2026familiarity. Second, a hierarchical generalized additive mixed model (HGAMM; @VanRij2019; @Pederson2019) was fitted to the pupil data in order to investigate the pupil old/new effect. We also used a Bayesian multilevel mixed model to compare pupil metrics (mean pupil size, maximum pupil size and rate of pupil change) between stimulus conditions (Learned vs Novel) and accuracy conditions (correct trials vs incorrect trials).
+First, the posterior distributions of LBA parameters were estimated and contrasts between conditions of interest were computed to ensure that we replicated the results found in @fournier2026familiarity.
+Second, a hierarchical generalized additive mixed model (HGAMM; @VanRij2019; @Pedersen2019) was fitted to the pupil data in order to investigate the pupil old/new effect.
+We also used a Bayesian multilevel mixed model to compare pupil metrics (mean pupil size, maximum pupil size and rate of pupil change) between stimulus conditions (Learned vs Novel) and accuracy conditions (correct trials vs incorrect trials).
 
-Third, regarding the associations between pupil size metrics and LBA parameters, we used correlations and data visualizations to characterize the zero-order relationships between parameters of interest (drift rate and threshold) from the LBA model with pupil size metrics. A "classical" correlation approach to generate point estimates of the correlation value and present those alongside scatter plots, as well as a Bayesian plausible value correlation approach to estimate the uncertainty in the estimated correlation values.
-Finally, in an exploratory analysis, we fitted a hierarchical Bayesian joint-model combining a Linear Ballistic Accumulator (LBA) model of response times and accuracy with mean pupil size. 
+Third, regarding the associations between pupil size metrics and LBA parameters, we used correlations and data visualizations to characterize the zero-order relationships between parameters of interest (drift rate and threshold) from the LBA model with pupil size metrics.
+A "classical" correlation approach to generate point estimates of the correlation value and present those alongside scatter plots, as well as a Bayesian plausible value correlation approach to estimate the uncertainty in the estimated correlation values.
+Finally, in an exploratory analysis, we fitted a hierarchical Bayesian joint-model combining a Linear Ballistic Accumulator (LBA) model of response times and accuracy with mean pupil size.
 The details of the analysis plan were preregistered (<https://osf.io/abpdy/overview>) and more specific details are presented below.
 
 ### LBA parameters
@@ -382,8 +470,19 @@ Assessment of the associations between parameter estimates and pupil size metric
 
 ### Hierarchical generalized additive mixed model (HGAMM)
 
-To test whether the time course of pupil dilation differed between conditions, we analysed the pupil traces with a hierarchical generalised additive mixed model (HGAMM; @Wood2011; @Wood2017; @Pedersen2019), an approach that has been applied successfully to pupillometric data [@VanRij2019]. GAMMs are well-suited to pupil data for four reasons. First, the pupil response follows a nonlinear time course whose shape is not exactly known in advance. GAMMs estimate the shape of the curve directly from the data using smooth functions (splines), and a penalty on the wiggliness of each smooth guards against overfitting. Second, the whole time course can be modelled at once, so the analysis does not depend on averaging the signal within arbitrarily chosen time windows. Differences between conditions can likewise be estimated as smooth functions of time, which shows when they emerge and how they evolve. Third, pupil time series are strongly autocorrelated, and GAMMs can account for this dependency [@VanRij2019]. In our case, we downsampled the pupil signal to 50 Hz to reduce autocorrelation between successive samples, following the recommendations of @VanRij2019. Fourth, a hierarchical extension adds participant-level smooths alongside the condition-level smooths, so that each participant's pupil response can differ in shape as well as in overall level. Through partial pooling, these individual curves are shrunk towards the group-level curve, which gives more stable estimates for participants with noisier data while still capturing individual variability [@Pedersen2019].
-The model specifications can be seen in @tbl-pupil-metrics-GAMM-formula. From the model predictions, the expected median pupil dilation signal was compared between conditions of interest: for Correct trials (Learned vs.Novel) to visualize the potential pupil "old/new" effect and separately for incorrect trials (Learned vs. Novel). The R package brms [@brms] was used to fit the GAMM model. 
+To test whether the time course of pupil dilation differed between conditions, we analysed the pupil traces with a hierarchical generalised additive mixed model (HGAMM; @Wood2011; @Wood2017; @Pedersen2019), an approach that has been applied successfully to pupillometric data [@VanRij2019].
+GAMMs are well-suited to pupil data for four reasons.
+First, the pupil response follows a nonlinear time course whose shape is not exactly known in advance.
+GAMMs estimate the shape of the curve directly from the data using smooth functions (splines), and a penalty on the wiggliness of each smooth guards against overfitting.
+Second, the whole time course can be modelled at once, so the analysis does not depend on averaging the signal within arbitrarily chosen time windows.
+Differences between conditions can likewise be estimated as smooth functions of time, which shows when they emerge and how they evolve.
+Third, pupil time series are strongly autocorrelated, and GAMMs can account for this dependency [@VanRij2019].
+In our case, we downsampled the pupil signal to 50 Hz to reduce autocorrelation between successive samples, following the recommendations of @VanRij2019.
+Fourth, a hierarchical extension adds participant-level smooths alongside the condition-level smooths, so that each participant's pupil response can differ in shape as well as in overall level.
+Through partial pooling, these individual curves are shrunk towards the group-level curve, which gives more stable estimates for participants with noisier data while still capturing individual variability [@Pedersen2019].
+The model specifications can be seen in @tbl-pupil-metrics-GAMM-formula.
+From the model predictions, the expected median pupil dilation signal was compared between conditions of interest: for Correct trials (Learned vs.Novel) to visualize the potential pupil "old/new" effect and separately for incorrect trials (Learned vs. Novel).
+The R package brms [@brms] was used to fit the GAMM model.
 
 ```{r}
 #| label: pupil-metrics-GAMM-formula
@@ -405,10 +504,11 @@ tt_manuscript(
 )
 ```
 
-
 ### Pupil metrics
 
-Pupil metrics (mean pupil size, peak pupil size and rate of pupil change) were compared between response accuracy (Correct vs. Incorrect trials) and stimulus conditions (Learned vs. Novel). For each pupil metrics, a multilevel Bayesian model was fitted and the specifications of each model can be seen in @tbl-pupil-metrics-model-formula. The R package brms [@brms] was used to fit the three Bayesian multilevel models. 
+Pupil metrics (mean pupil size, peak pupil size and rate of pupil change) were compared between response accuracy (Correct vs. Incorrect trials) and stimulus conditions (Learned vs. Novel).
+For each pupil metrics, a multilevel Bayesian model was fitted and the specifications of each model can be seen in @tbl-pupil-metrics-model-formula.
+The R package brms [@brms] was used to fit the three Bayesian multilevel models.
 
 ```{r}
 #| label: pupil-metrics-model-formula
@@ -440,8 +540,10 @@ For the drift rate parameter, we computed the median of two drift rate parameter
 Drift rate (TRUE-FALSE) is the subtraction drift rate (TRUE) - drift rate (FALSE) and represent the signal to noise ratio provided by the stimulus.
 For each stimulus condition (Learned and Novel), the median drift rate (TRUE-FALSE) was computed.
 
-All median values of these parameters posterior distribution were then correlated with the average of the pupil metrics for each corresponding conditions, for each subject. More specifically, Drift rate (TRUE-FALSE) was correlated with the difference in pupil metrics between correct and incorrect trials for each condition (ex: Drift rate (TRUE-FALSE) x (Mean pupil size (Correct) - Mean pupil size (Incorrect)). 
-Regarding threshold we correlated pupil metrics in function of the response of the participant. The threshold learned parameter was correlates with pupil metrics when the response of the participant was "Learned", and threshold novel parameter was correlates with pupil metrics when the response of the participant was "Novel", independently of the accuracy of the response. 
+All median values of these parameters posterior distribution were then correlated with the average of the pupil metrics for each corresponding conditions, for each subject.
+More specifically, Drift rate (TRUE-FALSE) was correlated with the difference in pupil metrics between correct and incorrect trials for each condition (ex: Drift rate (TRUE-FALSE) x (Mean pupil size (Correct) - Mean pupil size (Incorrect)).
+Regarding threshold we correlated pupil metrics in function of the response of the participant.
+The threshold learned parameter was correlates with pupil metrics when the response of the participant was "Learned", and threshold novel parameter was correlates with pupil metrics when the response of the participant was "Novel", independently of the accuracy of the response.
 
 ### Bayesian plausible value correlational analysis
 
@@ -453,10 +555,20 @@ By summarising the posterior distribution of these correlation values, this appr
 
 ### Joint modelling
 
-Beyond estimating post hoc associations between our parameters of interest and pupil metrics, we also fit a joint model linking the behavioral and pupil data directly. Joint modelling offers a way to combine multiple data streams, such as choice/RT data and physiological measures, within a single estimation framework, rather than analyzing each in isolation and relating them afterwards [@Turner2013; @Turner2017; @Turner2019]. Unlike post hoc correlations, which treat each parameter's point estimate as fixed and known, joint models estimate the relationship between data sources as part of the same generative process, so that measurement uncertainty in each parameter is propagated into the estimated association rather than discarded [@Turner2015; @Nunez2024]. By jointly modelling behavioral (response time and accuracy) and pupil data within a single hierarchical framework, we sought to characterize the magnitude of pupil–behavior relationships in a way that accounts for this shared uncertainty. It is important to stress that this analysis remains exploratory: our aim was to evaluate the feasibility of jointly modelling LBA and pupillometric data, and no substantive inferences are drawn from its results.
+Beyond estimating post hoc associations between our parameters of interest and pupil metrics, we also fit a joint model linking the behavioral and pupil data directly.
+Joint modelling offers a way to combine multiple data streams, such as choice/RT data and physiological measures, within a single estimation framework, rather than analyzing each in isolation and relating them afterwards [@Turner2013; @Turner2017; @Turner2019].
+Unlike post hoc correlations, which treat each parameter's point estimate as fixed and known, joint models estimate the relationship between data sources as part of the same generative process, so that measurement uncertainty in each parameter is propagated into the estimated association rather than discarded [@Turner2015; @Nunez2024].
+By jointly modelling behavioral (response time and accuracy) and pupil data within a single hierarchical framework, we sought to characterize the magnitude of pupil–behavior relationships in a way that accounts for this shared uncertainty.
+It is important to stress that this analysis remains exploratory: our aim was to evaluate the feasibility of jointly modelling LBA and pupillometric data, and no substantive inferences are drawn from its results.
 
-To fit a joint model, we used the EMC2 R package [@EMC2] to fit a hierarchical Bayesian model combining a Linear Ballistic Accumulator (LBA) model of response times and accuracy with a pupil component. In the LBA, drift rates varied by stimulus type (learned/novel) and accumulator match (match/mismatch), thresholds by response option, and start-point variability and non-decision time were estimated as single parameters, with the drift-rate variability of the mismatching accumulator fixed for identifiability. Mean baseline-corrected pupil size per trial was modeled with a Gaussian regression (via EMC2's design_fmri function, used here as a generic GLM engine, without convolution) with one regressor per trial type (Learned_Correct, Learned_Incorrect, Novel_Correct, Novel_Incorrect). Behavioral and pupil parameters were estimated together, so that individual differences in both were drawn from a shared multivariate distribution. From the resulting subject-level posterior draws, we computed correlations between conditions of interest. In our case, we extracted the mean posterior draws for Drift rate Learned (TRUE-FALSE) and Novel (TRUE-FALSE) and correlated them with the posterior draws of the mean pupil size for the learned condition (Correct-Incorrect) and for the novel condition (Correct-Incorrect). The objective was to estimate if we could retrieve the correlations obtained in the point estimates correlations section as well as the ones obtained in the plausible values section. As mentioned, this analysis is exploratory and was intended as a proof of concept for a joint modelling pipeline of pupil and behavioral data.
-
+To fit a joint model, we used the EMC2 R package [@EMC2] to fit a hierarchical Bayesian model combining a Linear Ballistic Accumulator (LBA) model of response times and accuracy with a pupil component.
+In the LBA, drift rates varied by stimulus type (learned/novel) and accumulator match (match/mismatch), thresholds by response option, and start-point variability and non-decision time were estimated as single parameters, with the drift-rate variability of the mismatching accumulator fixed for identifiability.
+Mean baseline-corrected pupil size per trial was modeled with a Gaussian regression (via EMC2's design_fmri function, used here as a generic GLM engine, without convolution) with one regressor per trial type (Learned_Correct, Learned_Incorrect, Novel_Correct, Novel_Incorrect).
+Behavioral and pupil parameters were estimated together, so that individual differences in both were drawn from a shared multivariate distribution.
+From the resulting subject-level posterior draws, we computed correlations between conditions of interest.
+In our case, we extracted the mean posterior draws for Drift rate Learned (TRUE-FALSE) and Novel (TRUE-FALSE) and correlated them with the posterior draws of the mean pupil size for the learned condition (Correct-Incorrect) and for the novel condition (Correct-Incorrect).
+The objective was to estimate if we could retrieve the correlations obtained in the point estimates correlations section as well as the ones obtained in the plausible values section.
+As mentioned, this analysis is exploratory and was intended as a proof of concept for a joint modelling pipeline of pupil and behavioral data.
 
 ### Inferential criteria
 
@@ -473,7 +585,8 @@ More generally, narrow estimates indicate precise estimates, wider intervals ind
 
 In this section, we describe the posterior distributions of the drift rate and threshold parameters for both Learned and Novel faces estimated from the distribution of response times and accuracy collected in the face recognition task.
 These distributions reflect the group-level effects of the two stimulus condition on drift rate (learned vs novel) and response conditions on threshold (learned vs novel).
-Contrasts between conditions were plotted to assess the difference between them. Posterior distributions for threshold and drift rate parameters are visualized in @fig-param and the medians and 95% quantile intervals are summarized in @tbl-lba-params.
+Contrasts between conditions were plotted to assess the difference between them.
+Posterior distributions for threshold and drift rate parameters are visualized in @fig-param and the medians and 95% quantile intervals are summarized in @tbl-lba-params.
 
 ```{r}
 #| label: load-lba-data
@@ -491,7 +604,7 @@ thresh_group <- theta_group |>
   filter(str_detect(param, "B_")) |>
   mutate(
     response = if_else(str_detect(param, "lRLearned"), "Learned", "Novel"),
-    response = factor(response, levels = c("Learned", "Novel"))
+    response = factor(response, levels = c("Novel", "Learned"))
   ) |>
   rename(.draw = "datapoint")
 
@@ -499,7 +612,7 @@ thresh_pid <- theta_pid |>
   filter(str_detect(param, "B_")) |>
   mutate(
     response = if_else(str_detect(param, "lRLearned"), "Learned", "Novel"),
-    response = factor(response, levels = c("Learned", "Novel"))
+    response = factor(response, levels = c("Novel", "Learned"))
   ) |>
   rename(.draw = "datapoint")
 
@@ -528,7 +641,7 @@ drift_group <- theta_group |>
   mutate(
     condition = if_else(str_detect(param, "Novel"), "Novel", "Learned"),
     accuracy = if_else(str_detect(param, "TRUE"), "True", "False"),
-    condition = factor(condition, levels = c("Learned", "Novel")),
+    condition = factor(condition, levels = c("Novel", "Learned")),
     accuracy = factor(accuracy, levels = c("False", "True"))
   ) |>
   rename(.draw = "datapoint")
@@ -538,7 +651,7 @@ drift_pid <- theta_pid |>
   mutate(
     condition = if_else(str_detect(param, "Novel"), "Novel", "Learned"),
     accuracy = if_else(str_detect(param, "TRUE"), "True", "False"),
-    condition = factor(condition, levels = c("Learned", "Novel")),
+    condition = factor(condition, levels = c("Novel", "Learned")),
     accuracy = factor(accuracy, levels = c("False", "True"))
   ) |>
   rename(.draw = "datapoint")
@@ -638,7 +751,6 @@ p_drift_group_cond | p_drift_group_diff
 *Drift rate*: Inspection of the posterior distributions shows that there is a familiarity effect in drift rate difference.
 The quality of the evidence accumulation was greater for Novel faces compared to Learned faces.
 
-
 ```{r}
 #| label: tbl-lba-params
 #| tbl-cap: "Posterior median and 95% quantile intervals for threshold and drift rate parameters."
@@ -719,9 +831,10 @@ tt_manuscript(
   format_tt(j = "Median", digits = 2, num_fmt = "decimal")
 ```
 
-Together these findings report the same pattern of results for both parameters observed in @fournier2026familiarity and in [IIDpaper].
+Together these findings report the same pattern of results for both parameters observed in @fournier2026familiarity and in \[IIDpaper\].
 
 ## Hierarchical generalized additive mixed model (HGAMM)
+
 ```{r}
 #| label: load-GAMM
 #| include: false
@@ -825,7 +938,6 @@ window_effect <- diff_draws |>
   median_qi(diff)
 ```
 
-
 ```{r}
 #| label: gamm-inline-values
 #| include: false
@@ -875,12 +987,16 @@ inc_lower <- fmt_mm(-we("false", ".upper"))
 inc_upper <- fmt_mm(-we("false", ".lower"))
 ```
 
-To investigate the pupil old/new effect in our face recognition task, we fitted a GAMM to the baseline-corrected pupil time series. From the posterior distribution of the model, we computed the expected pupil size over time for each cell of the 2 × 2 design, crossing stimulus condition (Learned vs. Novel) with response accuracy (Correct vs. Incorrect), and averaged these expectations across participants. The resulting posterior traces, together with the Learned − Novel difference for correct and incorrect trials, are shown in @fig-pupil-traces.
+To investigate the pupil old/new effect in our face recognition task, we fitted a HGAMM to the baseline-corrected pupil time series.
+From the posterior distribution of the model, we computed the expected pupil size over time for each cell of the 2 × 2 design, crossing stimulus condition (Learned vs. Novel) with response accuracy (Correct vs. Incorrect), and averaged these expectations across participants.
+The resulting posterior traces, together with the Learned − Novel difference for correct and incorrect trials, are shown in @fig-pupil-traces.
 
-*Correct trials*: Expected pupil size was larger for correctly recognised learned faces than for correctly rejected novel faces. The 95% credible interval of the difference excluded zero from `r cor_start` ms to `r cor_end` ms after stimulus onset, and averaged over `r win_txt`, the difference was `r cor_est` mm (95% CrI [`r cor_lower`, `r cor_upper`]). This pattern replicates the pupil old/new effect.
+*Correct trials*: Expected pupil size was larger for correctly recognised learned faces than for correctly rejected novel faces.
+The 95% credible interval of the difference excluded zero from `r cor_start` ms to `r cor_end` ms after stimulus onset, and averaged over `r win_txt`, the difference was `r cor_est` mm (95% CrI \[`r cor_lower`, `r cor_upper`\]).
+This pattern replicates the pupil old/new effect.
 
-*Incorrect trials*: Pupil traces for missed learned faces and falsely recognised novel faces overlapped for most of the trial. From `r inc_start` ms onwards, pupil size was larger for false alarms than for misses (95% CrI excluding zero), with an average difference of `r inc_est` mm (95% CrI [`r inc_lower`, `r inc_upper`]) over `r win_txt`.
-
+*Incorrect trials*: Pupil traces for missed learned faces and falsely recognised novel faces overlapped for most of the trial.
+From `r inc_start` ms onwards, pupil size was larger for false alarms than for misses (95% CrI excluding zero), with an average difference of `r inc_est` mm (95% CrI \[`r inc_lower`, `r inc_upper`\]) over `r win_txt`.
 
 ```{r}
 # Observed (preprocessed) pupil traces: mean ± SEM across participants
@@ -919,7 +1035,6 @@ trace_lims <- range(c(
 ))
 ```
 
-
 ```{r}
 # 3. One row = trace panel + difference panel ---------------------------------
 make_row <- function(acc, label) {
@@ -944,7 +1059,7 @@ make_row <- function(acc, label) {
     filter(Accuracy == acc) %>%
     ggplot(aes(time, mean, colour = Condition, fill = Condition)) +
     geom_ribbon(
-      aes(ymin = mean - sem, ymax = mean + sem),
+      aes(ymin = mean - 1.96*sem, ymax = mean + 1.96*sem),
       alpha = .2,
       colour = NA
     ) +
@@ -970,7 +1085,7 @@ make_row <- function(acc, label) {
     coord_cartesian(ylim = trace_lims) +
     x_scale +
     labs(
-      title = "GAMM prediction",
+      title = "HGAMM prediction",
       x = "Time (ms)",
       y = "Predicted pupil size (mm)"
     )
@@ -996,10 +1111,9 @@ p_correct <- make_row("true", "Correct trials")
 p_incorrect <- make_row("false", "Incorrect trials")
 ```
 
-
 ```{r}
 #| label: fig-pupil-traces
-#| fig-cap: "Observed and predicted pupil traces for Learned and Novel faces. Left: processed pupil traces, with lines showing the mean across participants and ribbons ±1 SEM. Middle: posterior predicted pupil traces from the GAMM, with lines showing posterior medians and ribbons 95% credible intervals. Right: the predicted difference between conditions (Learned − Novel), with the line showing the posterior median and the ribbon the 95% credible interval. In the middle and right panels, grey background shading marks the time windows in which the 95% credible interval of the Learned − Novel difference excludes zero."
+#| fig-cap: "Observed and predicted pupil traces for Learned and Novel faces. Left: processed pupil traces, with lines showing the mean across participants and ribbons ±1.96*SEM. Middle: posterior predicted pupil traces from the HGAMM, with lines showing posterior medians and ribbons 95% credible intervals. Right: the predicted difference between conditions (Learned − Novel), with the line showing the posterior median and the ribbon the 95% credible interval. In the middle and right panels, grey background shading marks the time windows in which the 95% credible interval of the Learned − Novel difference excludes zero."
 #| fig-subcap:
 #|   - "Correct trials: predicted pupil traces for Learned and Novel faces (left) and their difference, Learned − Novel (right)"
 #|   - "Incorrect trials: predicted pupil traces for Learned and Novel faces (left) and their difference, Learned − Novel (right)"
@@ -1011,6 +1125,7 @@ p_incorrect
 ```
 
 ## Pupil metrics
+
 ```{r}
 #| label: load-pupil-data
 #| include: false
@@ -1029,7 +1144,6 @@ data_pupil <- data_pupil_mean %>%
   rename(cond = condition, acc = accuracy)
 ```
 
-
 ```{r}
 #| label: load-models-metrics
 #| include: false
@@ -1044,7 +1158,6 @@ metric_levels <- c(
 fits <- set_names(metrics) |>
   map(~ readRDS(here("models", paste0("fit_", .x, ".rds"))))
 ```
-
 
 ```{r}
 #| label: plot-models-function
@@ -1137,15 +1250,22 @@ combined_contrast_table(fits) |>
 tab <- combined_contrast_table(fits)
 starts <- match(unique(tab$Metric), tab$Metric)
 ```
-To estimate if the stimulus condition (Learned vs Novel) and/or the response accuracy (Correct vs Incorrect) had any effect on the different pupil metrics, we fitted three Bayesian multilevel mixed model and report the posterior distributions, as well as the contrasts between stimulus conditions, accuracy and their interaction. Posterior contrasts for each pupil metric are reported in @tbl-contrasts-pupil, and the estimated condition means are shown in @fig-pupil-metrics-plots. All contrasts are expressed in standard deviation units.
 
-*Mean pupil size*: Mean pupil size was larger for learned than for novel faces (b = 0.23, 95% CrI [0.02, 0.44]). There was little evidence for a difference between correct and incorrect responses (b = 0.08, 95% CrI [−0.13, 0.30]). The interaction between condition and accuracy was positive (b = 0.85, 95% CrI [0.43, 1.28]): the difference between correct and incorrect responses was larger for learned than for novel faces.
+To estimate if the stimulus condition (Learned vs Novel) and/or the response accuracy (Correct vs Incorrect) had any effect on the different pupil metrics, we fitted three Bayesian multilevel mixed model and report the posterior distributions, as well as the contrasts between stimulus conditions, accuracy and their interaction.
+Posterior contrasts for each pupil metric are reported in @tbl-contrasts-pupil, and the estimated condition means are shown in @fig-pupil-metrics-plots.
+All contrasts are expressed in standard deviation units.
 
-*Peak pupil size*: Peak pupil size showed the same pattern. Peak size was larger for learned than for novel faces (b = 0.20, 95% CrI [0.03, 0.37]), with little evidence for an effect of accuracy (b = 0.04, 95% CrI [−0.13, 0.21]). The interaction was positive and was the largest effect across the three metrics (b = 0.96, 95% CrI [0.61, 1.30]).
+*Mean pupil size*: Mean pupil size was larger for learned than for novel faces (b = 0.23, 95% CrI \[0.02, 0.44\]).
+There was little evidence for a difference between correct and incorrect responses (b = 0.08, 95% CrI \[−0.13, 0.30\]).
+The interaction between condition and accuracy was positive (b = 0.85, 95% CrI \[0.43, 1.28\]): the difference between correct and incorrect responses was larger for learned than for novel faces.
 
-*Pupil change rate*: For pupil change rate, the rate was higher for learned than for novel faces (b = 0.25, 95% CrI [0.01, 0.48]). The rate was also higher for correct than for incorrect responses (b = 0.21, 95% CrI [−0.02, 0.45]), although the credible interval included zero. As for the other metrics, the interaction was positive (b = 0.75, 95% CrI [0.27, 1.23]).
+*Peak pupil size*: Peak pupil size showed the same pattern.
+Peak size was larger for learned than for novel faces (b = 0.20, 95% CrI \[0.03, 0.37\]), with little evidence for an effect of accuracy (b = 0.04, 95% CrI \[−0.13, 0.21\]).
+The interaction was positive and was the largest effect across the three metrics (b = 0.96, 95% CrI \[0.61, 1.30\]).
 
-That the effect emerged so consistently, using an independently collected pupil signal and a different population than most prior work, also serves as a useful validity check on the present paradigm. It indicates that our stimuli, procedure, and pupil-processing pipeline were sensitive enough to detect an effect of known, moderate size, which is a necessary precondition for interpreting the smaller and more exploratory correlational effects that follow.
+*Pupil change rate*: For pupil change rate, the rate was higher for learned than for novel faces (b = 0.25, 95% CrI \[0.01, 0.48\]).
+The rate was also higher for correct than for incorrect responses (b = 0.21, 95% CrI \[−0.02, 0.45\]), although the credible interval included zero.
+As for the other metrics, the interaction was positive (b = 0.75, 95% CrI \[0.27, 1.23\]).
 
 ```{r}
 #| label: fig-pupil-metrics-plots
@@ -1178,15 +1298,18 @@ tt(select(tab, -Metric), notes = "CrI = credible interval") |>
   style_tt(i = 0, fontsize = 0.8)
 ```
 
-
-
 ## Point estimates correlations
-In order to assess the association between pupil size and LBA parameters, we calculated the linear relationship between each pupil metrics (mean pupil size, peak pupil size and rate of pupil change) and the LBA parameters of interest. Correlations with threshold for each response can be found in @fig-corr-point-estimates a) and correlations with drift rate (TRUE-FALSE) for each stimulus condition can be found in @fig-corr-point-estimates b).
 
-*Threshold*: The only notable association was a negative correlation between the threshold for Learned responses and the rate of pupil change preceding those responses (r = -0.22). Participants whose pupils dilated more slowly in the 200 ms before a Learned response tended to set a higher threshold for that response, that is, to respond more cautiously.
+In order to assess the association between pupil size and LBA parameters, we calculated the linear relationship between each pupil metrics (mean pupil size, peak pupil size and rate of pupil change) and the LBA parameters of interest.
+Correlations with threshold for each response can be found in @fig-corr-point-estimates a) and correlations with drift rate (TRUE-FALSE) for each stimulus condition can be found in @fig-corr-point-estimates b).
 
+*Threshold*: The only notable association was a negative correlation between the threshold for Learned responses and the rate of pupil change preceding those responses (r = -0.22).
+Participants whose pupils dilated more slowly in the 200 ms before a Learned response tended to set a higher threshold for that response, that is, to respond more cautiously.
 
-*Drift rate*: For learned faces, participants with a larger drift-rate advantage for the correct response tended to show a larger pupil response on correct than on incorrect trials, both for mean pupil size (r = 0.23) and for peak pupil size (r = 0.17), but a smaller correct − incorrect difference in the rate of pupil change (r = −0.27). For novel faces, the relationship with pupil size went the other way: a larger drift-rate advantage was associated with a smaller correct − incorrect difference in mean (r = −0.18) and peak pupil size (r = −0.22), while the association with the rate of pupil change was weak (r = −0.10). In other words, better evidence discrimination went with relatively larger pupil responses on correct trials for learned faces, but relatively smaller ones for novel faces.
+*Drift rate*: For learned faces, participants with a larger drift-rate advantage for the correct response tended to show a larger pupil response on correct than on incorrect trials, both for mean pupil size (r = 0.23) and for peak pupil size (r = 0.17), but a smaller correct − incorrect difference in the rate of pupil change (r = −0.27).
+For novel faces, the relationship with pupil size went the other way: a larger drift-rate advantage was associated with a smaller correct − incorrect difference in mean (r = −0.18) and peak pupil size (r = −0.22), while the association with the rate of pupil change was weak (r = −0.10).
+In other words, better evidence discrimination went with relatively larger pupil responses on correct trials for learned faces, but relatively smaller ones for novel faces.
+
 ```{r}
 #| label: wrangle-pupil-metrics
 #| include: false
@@ -1479,7 +1602,6 @@ cor_results_thresh <- pairings_full_thresh %>%
   select(parameter = param_col, metric, pupil_column = pupil_col, r, p_value, n)
 ```
 
-
 ```{r}
 #| label: wrangle-plotting-point-estimates
 #| include: false
@@ -1535,7 +1657,6 @@ threshold_df <- build_plot_df(cor_results_thresh, full_df_thresh) %>%
     )
   )
 ```
-
 
 ```{r}
 #| label: plot-point-estimates
@@ -1612,7 +1733,6 @@ p_threshold <- make_metric_plot(
 )
 ```
 
-
 ```{r}
 #| label: fig-corr-point-estimates
 #| fig-cap: "Point estimates correlations between LBA parameters and pupil metrics"
@@ -1632,9 +1752,7 @@ Like described above (see Methods), instead of using a single point estimate to 
 We calculated the Person's *r* between each sample value from our posterior distribution for each parameter of each subject and their subject-level pupil metrics.
 The posterior distributions of parameters plausible correlation values are shown in @fig-plausible-corr.
 For both threshold and drift rate, we evaluated the 95% CI of the distributions.
-If the 95% CI of the distribution does not include 0, we would be confident in the existence of a relationship between these parameters and the associated pupil size metrics
-@tbl-plausible-cor provides a summary of these distributions.
-
+If the 95% CI of the distribution does not include 0, we would be confident in the existence of a relationship between these parameters and the associated pupil size metrics @tbl-plausible-cor provides a summary of these distributions.
 
 ```{r}
 #| label: compute-plausible-values
@@ -1784,13 +1902,20 @@ drift_post_plots <- levels(drift_post$Accuracy) %>%
 p_threshold_post <- make_posterior_plot(threshold_post, group_var = "Response")
 ```
 
+*Threshold:* For the response threshold, the only credible association involved the rate of pupil change.
+Participants with higher thresholds for "learned" responses showed a lower rate of pupil change on trials where they responded "learned" (median r = −0.20, 95% QI \[−0.34, −0.05\]).
+Pupil mean (r = −0.09, 95% QI \[−0.23, 0.05\]) and peak pupil size (r = 0.02, 95% QI \[−0.13, 0.16\]) on these trials were not credibly related to the learned-response threshold.
+For "novel" responses, none of the pupil metrics were credibly associated with the threshold: the 95% QIs included zero for pupil mean (r = −0.03, \[−0.23, 0.16\]), peak (r = 0.03, \[−0.17, 0.22\]), and rate of change (r = 0.06, \[−0.13, 0.22\]).
+Taken together, the threshold–pupil relationship was confined to learned responses and to the dynamics of the pupil response before a behavioral response, not its overall size.
 
-*Threshold:* For the response threshold, the only credible association involved the rate of pupil change. Participants with higher thresholds for "learned" responses showed a lower rate of pupil change on trials where they responded "learned" (median r = −0.20, 95% QI [−0.34, −0.05]). Pupil mean (r = −0.09, 95% QI [−0.23, 0.05]) and peak pupil size (r = 0.02, 95% QI [−0.13, 0.16]) on these trials were not credibly related to the learned-response threshold. For "novel" responses, none of the pupil metrics were credibly associated with the threshold: the 95% QIs included zero for pupil mean (r = −0.03, [−0.23, 0.16]), peak (r = 0.03, [−0.17, 0.22]), and rate of change (r = 0.06, [−0.13, 0.22]). Taken together, the threshold–pupil relationship was confined to learned responses and to the dynamics of the pupil response before a behavioral response, not its overall size.
-
-*Drift rate:* The difference in drift rate between correct and incorrect accumulators, an index of how well evidence discriminates the correct response, was related to the corresponding correct − incorrect difference in pupil metrics. The direction of this relationship depended on stimulus familiarity.
-For learned faces, participants with a larger drift rate advantage for the correct response showed a larger correct − incorrect difference in mean pupil size (r = 0.20, 95% QI [0.01, 0.37]), and a smaller correct − incorrect difference in the rate of pupil change (r = −0.24, 95% QI [−0.41, −0.06]). The association with peak pupil size was in the same direction as for the mean but not credible (r = 0.15, 95% QI [−0.05, 0.34]).
-For novel faces, the pattern reversed. A larger drift rate advantage was associated with a smaller correct − incorrect difference in both mean pupil size (r = −0.17, 95% QI [−0.32, −0.01]) and peak pupil size (r = −0.20, 95% QI [−0.35, −0.04]). The rate of pupil change was not credibly related (r = −0.09, 95% QI [−0.24, 0.08]). Thus, better evidence discrimination went with relatively larger pupil responses on correct trials for learned faces, but relatively smaller ones for novel faces.
-
+*Drift rate:* The difference in drift rate between correct and incorrect accumulators, an index of how well evidence discriminates the correct response, was related to the corresponding correct − incorrect difference in pupil metrics.
+The direction of this relationship depended on stimulus familiarity.
+For learned faces, participants with a larger drift rate advantage for the correct response showed a larger correct − incorrect difference in mean pupil size (r = 0.20, 95% QI \[0.01, 0.37\]), and a smaller correct − incorrect difference in the rate of pupil change (r = −0.24, 95% QI \[−0.41, −0.06\]).
+The association with peak pupil size was in the same direction as for the mean but not credible (r = 0.15, 95% QI \[−0.05, 0.34\]).
+For novel faces, the pattern reversed.
+A larger drift rate advantage was associated with a smaller correct − incorrect difference in both mean pupil size (r = −0.17, 95% QI \[−0.32, −0.01\]) and peak pupil size (r = −0.20, 95% QI \[−0.35, −0.04\]).
+The rate of pupil change was not credibly related (r = −0.09, 95% QI \[−0.24, 0.08\]).
+Thus, better evidence discrimination went with relatively larger pupil responses on correct trials for learned faces, but relatively smaller ones for novel faces.
 
 ```{r}
 #| label: fig-plausible-corr
@@ -1803,7 +1928,6 @@ For novel faces, the pattern reversed. A larger drift rate advantage was associa
 p_threshold_post
 drift_post_plots$`True-False`
 ```
-
 
 ```{r}
 #| label: tbl-plausible-cor
@@ -2050,7 +2174,12 @@ jr <- function(cond, what) {
 jpe <- function(cond) sprintf("%.2f", r_labels$r[r_labels$condition == cond])
 ```
 
-The joint model reproduced the pattern found in the two-step analyses (@fig-joint-model). For learned faces, the drift-rate difference between the correct and incorrect accumulators (TRUE − FALSE) was positively associated with the correct − incorrect difference in mean pupil size (point estimate: r = `r jpe("Learned")`; plausible values: median r = `r jr("Learned", "r")`, 95% CrI [`r jr("Learned", ".lower")`, `r jr("Learned", ".upper")`]). For novel faces, the association was negative (point estimate: r = `r jpe("Novel")`; plausible values: median r = `r jr("Novel", "r")`, 95% CrI [`r jr("Novel", ".lower")`, `r jr("Novel", ".upper")`]). Compared with the two-step plausible-value analysis, the novel-face correlation was somewhat stronger, while the learned-face correlation was similar in size but less certain, with its 95% CrI including zero. Because this analysis was intended as a proof of concept, we draw no inferences from these estimates. Their agreement with the two-step results nevertheless shows that the joint modelling pipeline recovers the same pattern of pupil–behaviour associations.
+The joint model reproduced the pattern found in the two-step analyses (@fig-joint-model).
+For learned faces, the drift-rate difference between the correct and incorrect accumulators (TRUE − FALSE) was positively associated with the correct − incorrect difference in mean pupil size (point estimate: r = `r jpe("Learned")`; plausible values: median r = `r jr("Learned", "r")`, 95% CrI \[`r jr("Learned", ".lower")`, `r jr("Learned", ".upper")`\]).
+For novel faces, the association was negative (point estimate: r = `r jpe("Novel")`; plausible values: median r = `r jr("Novel", "r")`, 95% CrI \[`r jr("Novel", ".lower")`, `r jr("Novel", ".upper")`\]).
+Compared with the two-step plausible-value analysis, the novel-face correlation was somewhat stronger, while the learned-face correlation was similar in size but less certain, with its 95% CrI including zero.
+Because this analysis was intended as a proof of concept, we draw no inferences from these estimates.
+Their agreement with the two-step results nevertheless shows that the joint modelling pipeline recovers the same pattern of pupil–behaviour associations.
 
 ```{r}
 #| label: fig-joint-model
@@ -2066,19 +2195,57 @@ plot_post_joint_plausible
 
 # Discussion
 
-In this study, we combined pupillometry with evidence-accumulation modelling to examine how the latent decision processes underlying face recognition relate to pupil dynamics. We first established that the pupil old/new effect is detectable in the context of face recognition memory. We then extended this finding to show how a physiological marker of a memory trace, as indexed by pupil size, is associated with specific computational parameters that govern the decision-making process, such as threshold and drift-rate. Together, these findings show the added value of linking the latent computational parameters of decision models to physiological markers of cognitive state, such as pupil dynamics. Accuracy-based analyses cannot estimate associations of this kind, because response caution and the quality of evidence accumulation are not directly observable; they can only be estimated once a computational model of the decision process is fitted to the data.
+In this study, we combined pupillometry with evidence-accumulation modelling to examine how the latent decision processes underlying face recognition relate to pupil dynamics.
+We first established that the pupil old/new effect is detectable in the context of face recognition memory.
+We then extended this finding to show how a physiological marker of a memory trace, as indexed by pupil size, is associated with specific computational parameters that govern the decision-making process, such as threshold and drift rate.
+Together, these findings show the added value of linking the latent computational parameters of decision models to physiological markers of cognitive state, such as pupil dynamics.
+Accuracy-based analyses cannot estimate associations of this kind, because response caution and the quality of evidence accumulation are not directly observable; they can only be estimated once a computational model of the decision process is fitted to the data.
 
-Across all three pupil metrics, previously learned faces elicited larger pupillary responses than novel faces, replicating the well-established pupil old/new effect in a face recognition paradigm [@Vo2008; @Otero2011]. This effect was not limited to mean dilation but extended to peak pupil size and the rate of pupil change. This convergence across metrics strengthens confidence that the effect reflects a genuine condition-level difference and is broadly consistent with the recent meta-analytic estimate of the effect's reliability across the pupillometric literature [@Lapteva2024]. 
+Across all three pupil metrics, previously learned faces elicited larger pupil responses than novel faces, replicating the pupil old/new effect in a face recognition paradigm [@Vo2008; @Otero2011].
+The convergence across mean, peak and rate of change strengthens confidence that this is a genuine condition-level difference, consistent with meta-analytic evidence for the effect's reliability [@Lapteva2024].
+However, accuracy modulated pupil responses far more for learned than for novel faces, and this interaction was the largest effect for all three metrics.
+If pupil size simply tracked correctness, accuracy should have affected both conditions similarly.
+Instead, the time-course analysis showed that hits produced a distinct pupil trajectory, and that on incorrect trials, false alarms elicited larger pupils than misses late in the trial.
+In both cases, the larger response followed a judgement of "old".
+This fits proposals that the pupil old/new effect reflects a subjective sense of recognition rather than accuracy per se [@Montefinese2013], possibly as an orienting response to recognising a stimulus [@Mill2016].
 
-Accuracy modulated pupil responses far more for learned than for novel faces, with the interaction being the largest effect observed across all three metrics. This selectivity is difficult to reconcile with an account in which pupil size simply tracks correctness: if that were so, accuracy should have modulated pupil responses comparably in both conditions. Instead, the pattern converges with our earlier time-course analysis, in which correctly recognized learned faces produced a visibly distinct pupillary trajectory while correct rejections, misses, and false alarms tracked one another far more closely. Together, these results align with proposals that the pupil old/new effect indexes a subjective sense of successful recognition rather than objective accuracy per se [@Montefinese2013], and with accounts framing pupil dilation during recognition as an orienting response to unexpectedly recognizing a stimulus, rather than a general correlate of correctness or retrieval effort [@Mill2016].
+Perhaps the most striking result was the reversal across stimulus conditions in how the drift-rate advantage (the difference in accumulation rate between the correct and incorrect accumulators) related to the corresponding pupil difference.
+Put simply, participants who discriminated better between learned and novel faces showed relatively larger pupils when correctly recognising a learned face, but relatively smaller pupils when correctly rejecting a novel face.
+This pattern is intuitive.
+For a learned face, good discrimination means that recognition rests on a clear memory trace, and recognising a face from a clear memory trace evokes a larger pupil response.
+For a novel face, good discrimination means that the face is rejected precisely because no memory trace is present, and the absence of a memory signal evokes a smaller pupil response.
+In other words, the pupil appears to track how clearly the memory evidence points to "old" or "new", which is what the drift-rate advantage captures in the LBA model.
+This complements the trial-level pattern described above: if the pupil tracks the memory signal as the participant experiences it, then responses judged "old" should evoke larger pupils regardless of accuracy, and participants whose memory signal separates learned from novel faces more clearly should show larger pupil differences between correct and incorrect responses.
+This interpretation fits accounts in which pupil responses index the subjectively experienced strength of memory retrieval [@GoldingerPapesh2012; @Otero2011].
+It also suggests why the relationship reverses for novel faces: participants with weaker discrimination may experience partial, conflict-inducing familiarity even when they correctly reject a novel face, and this state may itself be more pupil-arousing than a clear, easily executed rejection.
+This is in line with dual-process accounts that distinguish familiarity-based from recollection-based contributions to the pupil old/new effect [@KafkasMontaldi2015; @TaikhBodner2022].
+Given the modest effect sizes involved, we treat this account as one plausible interpretation among others rather than a settled conclusion, and see it as a specific, testable target for future work.
 
-Perhaps the most striking result was the reversal across stimulus conditions in how the drift-rate advantage (the difference in accumulation rate between the correct and incorrect accumulators) related to the corresponding pupil difference. Put simply, participants who discriminated better between learned and novel faces showed relatively larger pupils when correctly recognising a learned face, but relatively smaller pupils when correctly rejecting a novel face. This pattern is intuitive. For a learned face, good discrimination means that recognition rests on a clear memory trace, and recognising a face from a clear memory trace evokes a larger pupil response. For a novel face, good discrimination means that the face is rejected precisely because no memory trace is present, and the absence of a memory signal evokes a smaller pupil response. In other words, the pupil appears to track how clearly the memory evidence points to "old" or "new", which is what the drift-rate advantage captures in the LBA model. This interpretation fits accounts in which pupil responses index the strength of successful memory retrieval [@GoldingerPapesh2012; @Otero2011]. It also suggests why the relationship reverses for novel faces: participants with weaker discrimination may experience partial, conflict-inducing familiarity even when they correctly reject a novel face, and this state may itself be more pupil-arousing than a clear, easily executed rejection. This is in line with dual-process accounts that distinguish familiarity-based from recollection-based contributions to the pupil old/new effect [@KafkasMontaldi2015; @TaikhBodner2022]. Given the modest effect sizes involved, we treat this account as one plausible interpretation among others rather than a settled conclusion, and see it as a specific, testable target for future work.
+The plausible-value correlations did not point to a single, uniform relationship between pupil size and the LBA parameters.
+Instead, the threshold for "learned" responses was associated with the rate of pupil change, but not with mean or peak pupil size.
+This suggests that the dynamics of the pupil response may track adjustments in decision policy more closely than its overall magnitude does.
+This interpretation fits prior work linking pupil measures to shifts in decision threshold within evidence-accumulation models [@Cavanagh2014], and a broader literature in which pupil-linked arousal regulates decisions over time, through urgency signals that grow with elapsed time [@Murphy2016] and through arousal fluctuations that shape choice bias [@deGee2014; @deGee2017; @deGee2020].
+Different pupil metrics may therefore not be interchangeable measures of a single construct, but could index different aspects of the decision process.
+However, this evidence is limited: response caution was associated with only one pupil metric, for only one response type.
+Future studies should test whether this dissociation replicates, ideally with a design powered to detect associations of this size.
 
-The plausible-value correlations did not point to a single, uniform relationship between pupil size and the LBA parameters. Instead, the threshold for "learned" responses was associated with the rate of pupil change, but not with mean or peak pupil size. This suggests that the dynamics of the pupil response may track adjustments in decision policy more closely than its overall magnitude does. This interpretation fits prior work linking pupil measures to shifts in decision threshold within evidence-accumulation models [@Cavanagh2014], and a broader literature in which pupil-linked arousal regulates decisions over time, through urgency signals that grow with elapsed time [@Murphy2016] and through arousal fluctuations that shape choice bias [@deGee2014; @deGee2017; @deGee2020]. Different pupil metrics may therefore not be interchangeable measures of a single construct, but could index different aspects of the decision process. However, this evidence is limited: response caution was associated with only one pupil metric, for only one response type. Future studies should test whether this dissociation replicates, ideally with a design powered to detect associations of this size. 
+Although the plausible-value correlations incorporate posterior uncertainty in the LBA parameters, they remain a two-step approach in which behavioural and pupil parameters are estimated separately.
+Our exploratory joint model estimated these relationships within a single hierarchical framework [@Turner2013; @Turner2015; @Turner2017; @Nunez2024].
+For the drift-rate difference (TRUE − FALSE) and the correct − incorrect difference in mean pupil size, it reproduced the stimulus-dependent reversal: the association was positive for learned faces and negative for novel faces, although the learned-face credible interval included zero.
+This suggests that the reversal is not merely an artefact of the two-step procedure.
+However, the pupil component summarised each trial with a single value and could not capture the time course of the pupil response.
+A natural next step is to model the full pupil time series by convolving trial events with a pupil response function [@HoeksLevelt1993; @Wierda2012], as is done with the haemodynamic response in joint fMRI–behaviour models [@Turner2019].
+The amplitude and timing of the pupil response could then be related to drift rate and threshold directly within the model.
 
-Although the plausible-value correlations incorporate posterior uncertainty in the LBA parameters, they remain a two-step approach in which behavioural and pupil parameters are estimated separately. Our exploratory joint model estimated these relationships within a single hierarchical framework [@Turner2013; @Turner2015; @Turner2017; @Nunez2024]. For the drift-rate difference (TRUE − FALSE) and the correct − incorrect difference in mean pupil size, it reproduced the stimulus-dependent reversal: the association was positive for learned faces and negative for novel faces, although the learned-face credible interval included zero. This suggests that the reversal is not merely an artefact of the two-step procedure. However, the pupil component summarised each trial with a single value and could not capture the time course of the pupil response. A natural next step is to model the full pupil time series by convolving trial events with a pupil response function [@HoeksLevelt1993; @Wierda2012], as is done with the haemodynamic response in joint fMRI–behaviour models [@Turner2019]. The amplitude and timing of the pupil response could then be related to drift rate and threshold directly within the model.
-
-The main limitation of this study concerns the precision of the individual differences estimates. The associations we observed were small (*r* ≈ 0.2), and with 31 participants such correlations are estimated with wide credible intervals, so they require replication in larger samples. Their precision was further limited by the number of trials available for fitting the LBA model. With 90 trials per stimulus condition, before exclusions, subject-level parameters were estimated with considerable uncertainty, particularly the drift rates of the incorrect accumulators, which depend on the relatively few error responses. In a hierarchical model, such uncertainty also pulls individual estimates towards the group mean, reducing between-participant variability and likely attenuating the correlations with pupil metrics. The same scarcity of error trials makes the correct − incorrect pupil differences noisier than measures based on correct trials alone. Scaling up this design is not trivial, however. Pupillometry requires testing each participant individually in the laboratory under controlled lighting, and correlations typically stabilize only with samples of around 250 participants [@SchonbrodtPerugini2013]. Future work will therefore need to strike a balance between what is practically feasible in a pupillometry laboratory and the sample sizes required for stable individual differences estimates.
+The main limitation of this study concerns the precision of the individual differences estimates.
+The associations we observed were small (*r* ≈ 0.2), and with 31 participants such correlations are estimated with wide credible intervals, so they require replication in larger samples.
+Their precision was further limited by the number of trials available for fitting the LBA model.
+With 90 trials per stimulus condition, before exclusions, subject-level parameters were estimated with considerable uncertainty, particularly the drift rates of the incorrect accumulators, which depend on the relatively few error responses.
+In a hierarchical model, such uncertainty also pulls individual estimates towards the group mean, reducing between-participant variability and likely attenuating the correlations with pupil metrics.
+The same scarcity of error trials makes the correct − incorrect pupil differences noisier than measures based on correct trials alone.
+Scaling up this design is not trivial, however.
+Pupillometry requires testing each participant individually in the laboratory under controlled lighting, and correlations typically stabilize only with samples of around 250 participants [@SchonbrodtPerugini2013].
+Future work will therefore need to strike a balance between what is practically feasible in a pupillometry laboratory and the sample sizes required for stable individual differences estimates.
 
 {{< pagebreak >}}
 
