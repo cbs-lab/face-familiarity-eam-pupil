@@ -1,7 +1,7 @@
 ---
 title: "Supplementary Materials"
-subtitle: "Pupil stuff"
-running-head: "Decision models of face memory and pupil"
+subtitle: "Pupil size reflects computational processes of face recognition"
+running-head: "Pupil size and decision models of face memory"
 author:
   - name: Raphaël Fournier
     orcid: 0000-0002-5135-4066

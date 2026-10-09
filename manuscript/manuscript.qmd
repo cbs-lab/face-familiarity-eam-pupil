@@ -1,5 +1,5 @@
 ---
-title: "Title: Pupil stuff"
+title: "Pupil size reflects computational processes of face recognition"
 running-head: "Pupil size and decision models of face memory"
 author:
   - name: Raphaël Fournier
